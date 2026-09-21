@@ -1,0 +1,61 @@
+# Hello-world pipeline — exercises every platform primitive through the
+# public spec schema only. This is the framework contract test: if this spec
+# stops working, a consuming team's onboarding is broken.
+apiVersion: bosun/v1
+kind: Pipeline
+name: hello-world
+project: hello
+description: Framework contract test — params, preflight, gate, fan-out, repeat, quotas.
+
+parameters:
+  - name: greeting
+    resolver: activity
+    activity: hello_greeting        # registered by this project's package
+    params: {name: platform}
+  - name: regions
+    resolver: static
+    value: [us, eu, apac]
+  - name: banner
+    resolver: expression
+    expression: "params['greeting'] + '!'"
+
+quotas:
+  - name: region-pool
+    max_concurrent: 2
+
+steps:
+  - id: preflight-demo
+    name: Preflight then run custom backend
+    executor: hello_backend         # this project's own execution backend
+    config: {message: "from {{params.banner}}"}
+    preflight:
+      - check: hello_ready          # this project's own check
+        params: {ready: true}
+      - check: always_pass          # a kernel builtin
+
+  - id: fan-out-regions
+    name: Fan out over regions (tier-1 us first)
+    executor: hello_backend
+    config: {message: "processing {{item}}"}
+    depends_on: [preflight-demo]
+    fan_out:
+      over_param: regions
+      quota_pool: region-pool
+      tiers: [[us], [eu, apac]]
+
+  - id: sign-off
+    name: Human sign-off before release
+    executor: noop
+    depends_on: [fan-out-regions]
+    gate:
+      type: sign_off
+      prompt: "All regions processed. Approve release?"
+      channel: log
+      timeout_minutes: 60
+      on_timeout: reject
+
+  - id: release
+    name: Release (script step between backends)
+    executor: script
+    config: {command: ["echo", "released {{params.banner}}"]}
+    depends_on: [sign-off]

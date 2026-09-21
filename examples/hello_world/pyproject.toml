@@ -1,0 +1,25 @@
+[project]
+name = "bosun-example-hello-world"
+version = "0.1.0"
+description = "Hello-world example project — the living framework contract test. A consuming team's package: registers extensions via entry points, ships a pipeline spec, never touches kernel code."
+requires-python = ">=3.12"
+dependencies = ["bosun"]
+
+[project.entry-points."bosun.step_executors"]
+hello_backend = "hello_world_ext.extensions:HelloBackendExecutor"
+
+[project.entry-points."bosun.preflight_checks"]
+hello_ready = "hello_world_ext.extensions:HelloReadyCheck"
+
+[project.entry-points."bosun.param_resolvers"]
+hello_greeting = "hello_world_ext.extensions:GreetingResolver"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/hello_world_ext"]
+
+[tool.uv.sources]
+bosun = { workspace = true }

@@ -1,0 +1,57 @@
+# Phase 3 sandbox namespace hardening.
+# Apply into the sandbox namespace (default: bosun-e2e for testing;
+# dedicated bosun-sandbox namespace in production).
+#
+#   kubectl -n <ns> apply -f sandbox-rbac.yaml
+#
+# Pair with an admission policy (Kyverno/Gatekeeper) enforcing signed images —
+# this cluster already runs Gatekeeper with an allowed-registries policy.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: bosun-sandbox
+  labels:
+    app.kubernetes.io/managed-by: bosun
+automountServiceAccountToken: false
+# No Role / RoleBinding on purpose: sandbox jobs get ZERO Kubernetes API
+# permissions. The kernel (worker) creates/watches the Job; the playbook
+# container only touches what its NetworkPolicy allows.
+---
+# Default-deny for sandbox pods: no ingress, no egress.
+# Per-playbook policies open only the specific egress a remediation needs
+# (add a second policy selecting the playbook's label).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: bosun-sandbox-default-deny
+  labels:
+    app.kubernetes.io/managed-by: bosun
+spec:
+  podSelector:
+    matchLabels:
+      bosun/component: sandbox
+  policyTypes: ["Ingress", "Egress"]
+  # no ingress/egress rules = deny all
+---
+# Example per-playbook egress opening: DNS + one internal service.
+# Copy per playbook; select on the playbook label your job sets.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: bosun-sandbox-egress-example
+  labels:
+    app.kubernetes.io/managed-by: bosun
+spec:
+  podSelector:
+    matchLabels:
+      bosun/component: sandbox
+      bosun/playbook: example-with-egress
+  policyTypes: ["Egress"]
+  egress:
+    - to: []                      # DNS
+      ports:
+        - {protocol: UDP, port: 53}
+        - {protocol: TCP, port: 53}
+    # - to:
+    #     - ipBlock: {cidr: 10.20.30.40/32}   # the one system this playbook fixes
+    #   ports: [{protocol: TCP, port: 8123}]

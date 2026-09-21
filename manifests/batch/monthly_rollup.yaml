@@ -1,0 +1,132 @@
+# Monthly rollup, round 1 form (create-external + aggregate only).
+# Referenced by pipeline specs as: manifest_file: batch/monthly_rollup.yaml
+# Parameters (yearmonth, cutoff_date, start_date) are injected by the platform.
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata: {}
+spec:
+  serviceAccountName: argo
+  entrypoint: main
+  parallelism: 10
+  arguments:
+    parameters:
+    - name: yearmonth
+    - name: cutoff_date
+    - name: start_date
+  templates:
+  - name: main
+    steps:
+    - - name: rollup-main
+        template: rollup-executor
+        arguments:
+          parameters:
+          - name: yearmonth
+            value: '{{workflow.parameters.yearmonth}}'
+          - name: region
+            value: '{{item}}'
+          - name: cutoff_date
+            value: '{{workflow.parameters.cutoff_date}}'
+          - name: start_date
+            value: '{{workflow.parameters.start_date}}'
+        withItems:
+        - us_en
+        - uk_en
+        - ca_en
+        - au_en
+        - fr_fr
+        - de_de
+        - es_es
+        - nl_nl
+        - it_it
+        - br_pt
+        - jp_ja
+        - in_en
+  - name: rollup-executor
+    inputs:
+      parameters:
+      - name: yearmonth
+      - name: region
+      - name: cutoff_date
+      - name: start_date
+    dag:
+      tasks:
+      - name: create-external
+        template: create-external-table
+        arguments:
+          parameters:
+          - name: yearmonth
+            value: '{{inputs.parameters.yearmonth}}'
+          - name: region
+            value: '{{inputs.parameters.region}}'
+          - name: cutoff_date
+            value: '{{inputs.parameters.cutoff_date}}'
+      - name: aggregate
+        dependencies:
+        - create-external
+        template: load-internal-table
+        arguments:
+          parameters:
+          - name: yearmonth
+            value: '{{inputs.parameters.yearmonth}}'
+          - name: region
+            value: '{{inputs.parameters.region}}'
+          - name: cutoff_date
+            value: '{{inputs.parameters.cutoff_date}}'
+          - name: start_date
+            value: '{{inputs.parameters.start_date}}'
+  - name: create-external-table
+    inputs:
+      parameters:
+      - name: yearmonth
+      - name: region
+      - name: cutoff_date
+    container:
+      image: python:3.12-slim
+      command:
+      - python3
+      args:
+      - scripts/create_external_table.py
+      - -m
+      - '{{inputs.parameters.yearmonth}}'
+      - -r
+      - '{{inputs.parameters.region}}'
+      - -c
+      - '{{inputs.parameters.cutoff_date}}'
+      - -y
+  - name: load-internal-table
+    inputs:
+      parameters:
+      - name: yearmonth
+      - name: region
+      - name: cutoff_date
+      - name: start_date
+    # Long aggregation: pin to a stable pool and keep the autoscaler off it.
+    # Replace the pool name with one from your own cluster.
+    nodeSelector:
+      cloud.google.com/gke-nodepool: batch-static-pool
+    metadata:
+      annotations:
+        cluster-autoscaler.kubernetes.io/safe-to-evict: 'false'
+    tolerations:
+    - effect: NoSchedule
+      key: static-nodes
+      operator: Exists
+    - effect: NoSchedule
+      key: node.kubernetes.io/disk-pressure
+      operator: Equal
+      value: 'false'
+    container:
+      image: python:3.12-slim
+      command:
+      - python3
+      args:
+      - scripts/load_internal_table.py
+      - -m
+      - '{{inputs.parameters.yearmonth}}'
+      - -r
+      - '{{inputs.parameters.region}}'
+      - -c
+      - '{{inputs.parameters.cutoff_date}}'
+      - -s
+      - '{{inputs.parameters.start_date}}'
+      - -y

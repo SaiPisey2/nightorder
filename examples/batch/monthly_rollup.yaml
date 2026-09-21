@@ -1,0 +1,95 @@
+# Monthly rollup — Round 1
+#
+# Replaces a manual runbook step of the shape:
+#   argo submit -n argo workflows/rollup/pre_aggregation.yaml \
+#     --parameter-file workflows/rollup/params.yaml
+#
+# The Argo workflow itself lives in manifests/batch/monthly_rollup.yaml. The
+# worker loads it at execution time; editing the workflow never requires
+# re-registering this spec.
+#
+# What the spec automates that a runbook cannot:
+#   - cutoff_date  = newest partition actually present in the feed bucket,
+#                    instead of "go and eyeball the dashboard"
+#   - preflight    = blocks kickoff unless that partition really exists,
+#                    which is the silent-failure killer
+#   - sign-off gate = a human confirms the resolved parameters before a
+#                    multi-hour production run starts
+apiVersion: bosun/v1
+kind: Pipeline
+name: monthly_rollup_round1
+project: batch
+description: >
+  Monthly aggregation kickoff, round 1. Submits the rollup workflow
+  (one create-external + aggregate pair per region) to Argo.
+
+parameters:
+  - name: yearmonth
+    resolver: activity
+    activity: now_yearmonth          # current month, e.g. 202609 — override at run start if needed
+
+  - name: feed_bucket
+    resolver: static
+    value: gs://example-data-lake/events/v1
+
+  - name: cutoff_date
+    resolver: activity
+    activity: command                # newest feed partition = cutoff
+    params:
+      command:
+        - sh
+        - -c
+        - "gsutil ls 'gs://example-data-lake/events/v1/' | grep -o 'day=[0-9]\\{8\\}' | sort | tail -1 | cut -d= -f2"
+
+  - name: start_date
+    resolver: static
+    value: "-1"                      # -1 = initial date (round 1); round 2 uses round 1's cutoff_date + 1
+
+  - name: attach_to
+    resolver: static
+    value: ""                        # re-poll: set to an existing Argo workflow name
+                                     # (run param override) to WATCH it instead of submitting
+
+steps:
+  - id: kickoff-rollup
+    name: Kickoff monthly rollup (round 1, all regions)
+    executor: argo
+    timeout_minutes: 0               # 0 = no timeout: watch as long as the Argo workflow runs
+    retry:
+      maximum_attempts: 1            # never auto-resubmit a multi-hour production job
+
+    notify:                          # card when the step starts/finishes
+      on: [started, succeeded, failed]
+      mentions: [oncall@example.com]
+
+    preflight:
+      - check: command_succeeds      # the feed partition for cutoff_date must exist
+        params:
+          command:
+            - sh
+            - -c
+            - "gsutil ls '{{params.feed_bucket}}/day={{params.cutoff_date}}/' | head -1"
+        on_fail: block
+
+    gate:
+      type: sign_off
+      prompt: >-
+        Kick off the monthly rollup, round 1, for {{params.yearmonth}}?
+        cutoff_date={{params.cutoff_date}} (newest feed partition),
+        start_date={{params.start_date}}. Approving submits to production Argo.
+      channel: teams
+      channel_params:
+        mentions: [oncall@example.com]
+      # timeout_minutes: 1440
+      on_timeout: reject
+
+    config:
+      # kube_context omitted: inherits BOSUN_KUBE_CONTEXT / the current context
+      namespace: argo
+      poll_seconds: 60
+      attach_to: "{{params.attach_to}}"                 # empty = normal submit
+      manifest_file: batch/monthly_rollup.yaml          # resolved against BOSUN_MANIFESTS_DIR
+      parameters:
+        yearmonth: "{{params.yearmonth}}"
+        cutoff_date: "{{params.cutoff_date}}"
+        start_date: "{{params.start_date}}"

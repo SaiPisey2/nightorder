@@ -1,0 +1,109 @@
+# rollup-mini — dummy pipeline shaped like the rollup monthly runbook, built
+# entirely from kernel builtins (no custom extensions needed). Demonstrates:
+# computed params, preflight file check, budget gate, locale fan-out with
+# tiers + shared quota, designed re-run until "queue drained", manual step.
+# Local-testable: every step is a script; swap executors to `argo` in prod.
+apiVersion: bosun/v1
+kind: Pipeline
+name: rollup-mini
+project: batch
+description: rollup-shaped dummy monthly pipeline (safe local simulation).
+
+parameters:
+  - name: yearmonth
+    resolver: activity
+    activity: now_yearmonth
+    params: {offset_months: 0}
+  - name: prev_yearmonth
+    resolver: activity
+    activity: now_yearmonth
+    params: {offset_months: -1}
+  - name: locales
+    resolver: static
+    value: [us_en, uk_en, de_de, fr_fr]
+  - name: workdir
+    resolver: static
+    value: /tmp/bosun-demo
+  - name: serp_cost_usd
+    resolver: activity
+    activity: command
+    params: {command: "echo 31000"}   # pretend cost calculator script
+
+quotas:
+  - name: vendor-budget
+    max_concurrent: 2                  # stands in for the 40K rpm shared budget
+
+steps:
+  - id: prepare
+    name: Prepare workspace
+    executor: script
+    config: {command: ["sh", "-c", "mkdir -p {{params.workdir}} && rm -f {{params.workdir}}/queue.log && touch {{params.workdir}}/feed-{{params.yearmonth}}.ready"]}
+
+  - id: pre-aggregation
+    name: Pre-aggregation (feed must exist first)
+    executor: script
+    config: {command: ["sh", "-c", "echo aggregating {{params.yearmonth}} vs {{params.prev_yearmonth}}"]}
+    depends_on: [prepare]
+    preflight:
+      - check: file_exists            # DFS feed file present (silent-failure killer)
+        params: {path: "{{params.workdir}}/feed-{{params.yearmonth}}.ready"}
+        on_fail: block
+
+  - id: cost-approval
+    name: SERP collection cost gate ($27k standing budget)
+    executor: noop
+    depends_on: [pre-aggregation]
+    gate:
+      type: budget_approval
+      prompt: "Computed SERP cost {{params.serp_cost_usd}} USD exceeds standing budget 27000 USD. Approve collection?"
+      channel: log
+      timeout_minutes: 120
+      on_timeout: reject
+
+  - id: sv-collection
+    name: SV collection per locale (run twice until queue drains)
+    executor: script
+    config: {command: ["sh", "-c", "echo collect {{item}} >> {{params.workdir}}/queue.log"]}
+    depends_on: [cost-approval]
+    fan_out:
+      over_param: locales
+      quota_pool: vendor-budget
+      tiers: [[us_en, uk_en], [de_de, fr_fr]]   # phase-1 locales first
+    retry: {maximum_attempts: 2, initial_interval_seconds: 1}
+
+  - id: rerun-until-drained
+    name: Designed re-run until queue drained
+    executor: script
+    config: {command: ["sh", "-c", "echo drain-pass >> {{params.workdir}}/queue.log"]}
+    depends_on: [sv-collection]
+    repeat:
+      until_check: command_succeeds
+      params: {command: ["sh", "-c", "[ $(wc -l < {{params.workdir}}/queue.log) -ge 6 ]"]}
+      max_iterations: 3
+      delay_seconds: 1
+
+  - id: qa-signoff
+    name: QA sign-off on tables
+    executor: noop
+    depends_on: [rerun-until-drained]
+    gate:
+      type: sign_off
+      prompt: "QA: verify cluster tables for {{params.yearmonth}} before release."
+      channel: log
+      timeout_minutes: 240
+      on_timeout: reject
+
+  - id: update-count-sheet
+    name: Update count sheet (human, outside platform)
+    executor: manual
+    config:
+      instructions: "Update the SharePoint count sheet for {{params.yearmonth}}, then confirm."
+      channel: log
+    depends_on: [qa-signoff]
+    timeout_minutes: 240
+
+  - id: release
+    name: Release be_sv tables
+    executor: script
+    config: {command: ["sh", "-c", "echo released {{params.yearmonth}} && date"]}
+    depends_on: [update-count-sheet]
