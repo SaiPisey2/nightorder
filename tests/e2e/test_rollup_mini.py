@@ -54,7 +54,7 @@ def test_rollup_mini_end_to_end(client, project):
 def test_preflight_blocks_and_gate_reject_fails_run(client, project):
     key = {"X-API-Key": project["key"]}
     spec = {
-        "apiVersion": "bosun/v1", "kind": "Pipeline", "name": "guardrails", "project": project["id"],
+        "apiVersion": "nightorder/v1", "kind": "Pipeline", "name": "guardrails", "project": project["id"],
         "steps": [
             {"id": "blocked", "executor": "noop",
              "preflight": [{"check": "always_fail", "params": {"reason": "feed file missing"}, "on_fail": "block"}]},
@@ -76,7 +76,7 @@ def test_preflight_blocks_and_gate_reject_fails_run(client, project):
 def test_run_param_override_provenance(client, project):
     key = {"X-API-Key": project["key"]}
     spec = {
-        "apiVersion": "bosun/v1", "kind": "Pipeline", "name": "override", "project": project["id"],
+        "apiVersion": "nightorder/v1", "kind": "Pipeline", "name": "override", "project": project["id"],
         "parameters": [{"name": "target", "resolver": "static", "value": "default"}],
         "steps": [{"id": "s", "executor": "script", "config": {"command": ["echo", "{{params.target}}"]}}],
     }

@@ -11,8 +11,8 @@ function DangerZone({ session }: { session: Session }) {
     setBusy(true); setError(null);
     try {
       await api.del(`/projects/${session.project}?confirm=${session.project}`, session.key);
-      localStorage.removeItem("bosun.session");
-      localStorage.removeItem(`bosun.chat.${session.project}`);
+      localStorage.removeItem("nightorder.session");
+      localStorage.removeItem(`nightorder.chat.${session.project}`);
       location.reload(); // back to project picker
     } catch (e: any) {
       setError(e.message);

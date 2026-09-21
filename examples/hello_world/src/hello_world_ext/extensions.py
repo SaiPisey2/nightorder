@@ -2,13 +2,13 @@
 
 This file demonstrates every extension kind a team typically needs:
 a step executor (custom backend), a preflight check, a parameter resolver.
-It imports nothing from the kernel except `bosun.contracts`.
+It imports nothing from the kernel except `nightorder.contracts`.
 """
 from __future__ import annotations
 
 from typing import Any
 
-from bosun.contracts import (
+from nightorder.contracts import (
     CheckResult,
     ExecutionResult,
     ParameterResolver,

@@ -15,7 +15,7 @@
 #                    which is the silent-failure killer
 #   - sign-off gate = a human confirms the resolved parameters before a
 #                    multi-hour production run starts
-apiVersion: bosun/v1
+apiVersion: nightorder/v1
 kind: Pipeline
 name: monthly_rollup_round1
 project: batch
@@ -84,11 +84,11 @@ steps:
       on_timeout: reject
 
     config:
-      # kube_context omitted: inherits BOSUN_KUBE_CONTEXT / the current context
+      # kube_context omitted: inherits NIGHTORDER_KUBE_CONTEXT / the current context
       namespace: argo
       poll_seconds: 60
       attach_to: "{{params.attach_to}}"                 # empty = normal submit
-      manifest_file: batch/monthly_rollup.yaml          # resolved against BOSUN_MANIFESTS_DIR
+      manifest_file: batch/monthly_rollup.yaml          # resolved against NIGHTORDER_MANIFESTS_DIR
       parameters:
         yearmonth: "{{params.yearmonth}}"
         cutoff_date: "{{params.cutoff_date}}"

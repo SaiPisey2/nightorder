@@ -80,7 +80,7 @@ def test_open_platform_and_project_boundaries(client, project):
 
 def test_invalid_spec_rejected(client, project):
     key = {"X-API-Key": project["key"]}
-    bad = {"apiVersion": "bosun/v1", "kind": "Pipeline", "name": "bad", "project": project["id"],
+    bad = {"apiVersion": "nightorder/v1", "kind": "Pipeline", "name": "bad", "project": project["id"],
            "steps": [{"id": "a", "executor": "no-such-backend", "depends_on": ["ghost"]}]}
     resp = client.post(f"/projects/{project['id']}/specs", json=bad, headers=key)
     assert resp.status_code == 422

@@ -38,11 +38,11 @@ Copy `examples/hello_world/` — it is a complete consuming-team package:
 ```
 your_project/
   pyproject.toml        # entry-points = your extension registration
-  src/your_ext/         # implements bosun.contracts ABCs
+  src/your_ext/         # implements nightorder.contracts ABCs
   pipeline.yaml         # your spec
 ```
 
-Contracts you can implement (from `bosun.contracts`):
+Contracts you can implement (from `nightorder.contracts`):
 `StepExecutor.execute(ctx, config)`, `PreflightCheck.run(ctx, params)`,
 `ParameterResolver.resolve(ctx, params)`, `GateChannel.deliver(notification, params)`.
 Each gets a `StepContext` (project, run, step, unit, attempt, idempotency_key,

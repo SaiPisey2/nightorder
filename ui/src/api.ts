@@ -3,13 +3,13 @@
 export type Session = { project: string; key: string; actor: string };
 
 export function loadSession(): Session | null {
-  const raw = localStorage.getItem("bosun.session");
+  const raw = localStorage.getItem("nightorder.session");
   return raw ? JSON.parse(raw) : null;
 }
 
 export function saveSession(s: Session | null) {
-  if (s) localStorage.setItem("bosun.session", JSON.stringify(s));
-  else localStorage.removeItem("bosun.session");
+  if (s) localStorage.setItem("nightorder.session", JSON.stringify(s));
+  else localStorage.removeItem("nightorder.session");
 }
 
 export class ApiError extends Error {

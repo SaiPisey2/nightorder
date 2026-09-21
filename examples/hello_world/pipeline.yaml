@@ -1,7 +1,7 @@
 # Hello-world pipeline — exercises every platform primitive through the
 # public spec schema only. This is the framework contract test: if this spec
 # stops working, a consuming team's onboarding is broken.
-apiVersion: bosun/v1
+apiVersion: nightorder/v1
 kind: Pipeline
 name: hello-world
 project: hello

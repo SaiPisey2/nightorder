@@ -1,5 +1,5 @@
 """E2E harness: boots the full local stack (Postgres via docker compose,
-Temporal dev server, bosun worker, bosun API) and tears down what it
+Temporal dev server, nightorder worker, nightorder API) and tears down what it
 started. Requires docker + temporal CLI on PATH."""
 from __future__ import annotations
 
@@ -53,7 +53,7 @@ def stack():
     # 1. postgres + qdrant
     subprocess.run(["docker", "compose", "up", "-d", "postgres", "qdrant"], cwd=ROOT, check=True, capture_output=True)
     _wait(lambda: subprocess.run(
-        ["docker", "exec", "bosun-postgres", "pg_isready", "-U", "bosun"],
+        ["docker", "exec", "nightorder-postgres", "pg_isready", "-U", "nightorder"],
         capture_output=True).returncode == 0, 60, "postgres")
     _wait(lambda: _port_open(6333), 60, "qdrant")
 
@@ -71,11 +71,11 @@ def stack():
     worker_log = open(log_dir / "worker.log", "w")
     api_log = open(log_dir / "api.log", "w")
     relay_log = open(log_dir / "relay.log", "w")
-    procs.append(subprocess.Popen(["uv", "run", "bosun-worker"], cwd=ROOT, env=env,
+    procs.append(subprocess.Popen(["uv", "run", "nightorder-worker"], cwd=ROOT, env=env,
                                   stdout=worker_log, stderr=subprocess.STDOUT))
-    procs.append(subprocess.Popen(["uv", "run", "bosun-api"], cwd=ROOT, env=env,
+    procs.append(subprocess.Popen(["uv", "run", "nightorder-api"], cwd=ROOT, env=env,
                                   stdout=api_log, stderr=subprocess.STDOUT))
-    procs.append(subprocess.Popen(["uv", "run", "bosun-relay"], cwd=ROOT, env=env,
+    procs.append(subprocess.Popen(["uv", "run", "nightorder-relay"], cwd=ROOT, env=env,
                                   stdout=relay_log, stderr=subprocess.STDOUT))
 
     def api_up() -> bool:
@@ -84,7 +84,7 @@ def stack():
         except Exception:
             return False
 
-    _wait(api_up, 90, "bosun api")
+    _wait(api_up, 90, "nightorder api")
     time.sleep(2)  # worker registration grace
 
     yield {"api": API, "env": env}

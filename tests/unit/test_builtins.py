@@ -1,9 +1,9 @@
 import pytest
 
-from bosun.builtins.executors import ScriptExecutor, _render, redact
-from bosun.builtins.checks import CommandSucceedsCheck, FileExistsCheck
-from bosun.builtins.resolvers import CommandResolver, NowYearMonthResolver
-from bosun.contracts import StepContext
+from nightorder.builtins.executors import ScriptExecutor, _render, redact
+from nightorder.builtins.checks import CommandSucceedsCheck, FileExistsCheck
+from nightorder.builtins.resolvers import CommandResolver, NowYearMonthResolver
+from nightorder.contracts import StepContext
 
 
 def ctx(**params) -> StepContext:

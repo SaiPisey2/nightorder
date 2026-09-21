@@ -25,7 +25,7 @@ def _chat(client, project, messages):
 def test_chat_reports_run_status_with_tools(client, project):
     key = {"X-API-Key": project["key"]}
     spec = {
-        "apiVersion": "bosun/v1", "kind": "Pipeline", "name": "chatdemo", "project": project["id"],
+        "apiVersion": "nightorder/v1", "kind": "Pipeline", "name": "chatdemo", "project": project["id"],
         "steps": [
             {"id": "ok-step", "executor": "script", "config": {"command": ["echo", "fine"]}},
             {"id": "bad-step", "executor": "script", "depends_on": ["ok-step"],
@@ -45,7 +45,7 @@ def test_chat_reports_run_status_with_tools(client, project):
 
 
 def test_chat_fixes_invalid_spec_yaml(client, project):
-    broken = """apiVersion: bosun/v1
+    broken = """apiVersion: nightorder/v1
 kind: Pipeline
 name: broken
 project: {p}

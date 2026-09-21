@@ -1,7 +1,7 @@
 [project]
-name = "bosun"
+name = "nightorder"
 version = "0.1.0"
-description = "Bosun kernel: spec interpreter, Temporal orchestration, extension registry, control-plane API"
+description = "Nightorder kernel: spec interpreter, Temporal orchestration, extension registry, control-plane API"
 requires-python = ">=3.12"
 dependencies = [
     "temporalio>=1.9,<2",
@@ -22,37 +22,37 @@ dependencies = [
 [project.optional-dependencies]
 dev = []
 
-[project.entry-points."bosun.step_executors"]
-script = "bosun.builtins.executors:ScriptExecutor"
-argo = "bosun.builtins.executors:ArgoWorkflowExecutor"
-remote_exec = "bosun.builtins.executors:RemoteExecExecutor"
-noop = "bosun.builtins.executors:NoopExecutor"
+[project.entry-points."nightorder.step_executors"]
+script = "nightorder.builtins.executors:ScriptExecutor"
+argo = "nightorder.builtins.executors:ArgoWorkflowExecutor"
+remote_exec = "nightorder.builtins.executors:RemoteExecExecutor"
+noop = "nightorder.builtins.executors:NoopExecutor"
 
-[project.entry-points."bosun.preflight_checks"]
-file_exists = "bosun.builtins.checks:FileExistsCheck"
-http_ok = "bosun.builtins.checks:HttpOkCheck"
-command_succeeds = "bosun.builtins.checks:CommandSucceedsCheck"
-always_pass = "bosun.builtins.checks:AlwaysPassCheck"
-always_fail = "bosun.builtins.checks:AlwaysFailCheck"
+[project.entry-points."nightorder.preflight_checks"]
+file_exists = "nightorder.builtins.checks:FileExistsCheck"
+http_ok = "nightorder.builtins.checks:HttpOkCheck"
+command_succeeds = "nightorder.builtins.checks:CommandSucceedsCheck"
+always_pass = "nightorder.builtins.checks:AlwaysPassCheck"
+always_fail = "nightorder.builtins.checks:AlwaysFailCheck"
 
-[project.entry-points."bosun.param_resolvers"]
-now_yearmonth = "bosun.builtins.resolvers:NowYearMonthResolver"
-env = "bosun.builtins.resolvers:EnvResolver"
-command = "bosun.builtins.resolvers:CommandResolver"
+[project.entry-points."nightorder.param_resolvers"]
+now_yearmonth = "nightorder.builtins.resolvers:NowYearMonthResolver"
+env = "nightorder.builtins.resolvers:EnvResolver"
+command = "nightorder.builtins.resolvers:CommandResolver"
 
-[project.entry-points."bosun.gate_channels"]
-log = "bosun.builtins.gate_channels:LogChannel"
-webhook = "bosun.builtins.gate_channels:WebhookChannel"
-teams = "bosun.builtins.gate_channels:TeamsChannel"
+[project.entry-points."nightorder.gate_channels"]
+log = "nightorder.builtins.gate_channels:LogChannel"
+webhook = "nightorder.builtins.gate_channels:WebhookChannel"
+teams = "nightorder.builtins.gate_channels:TeamsChannel"
 
 [project.scripts]
-bosun-worker = "bosun.temporal.worker:main"
-bosun-api = "bosun.api.main:main"
-bosun-relay = "bosun.relay:main"
+nightorder-worker = "nightorder.temporal.worker:main"
+nightorder-api = "nightorder.api.main:main"
+nightorder-relay = "nightorder.relay:main"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/bosun"]
+packages = ["src/nightorder"]

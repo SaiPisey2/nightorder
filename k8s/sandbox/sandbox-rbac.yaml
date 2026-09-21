@@ -1,6 +1,6 @@
 # Phase 3 sandbox namespace hardening.
-# Apply into the sandbox namespace (default: bosun-e2e for testing;
-# dedicated bosun-sandbox namespace in production).
+# Apply into the sandbox namespace (default: nightorder-e2e for testing;
+# dedicated nightorder-sandbox namespace in production).
 #
 #   kubectl -n <ns> apply -f sandbox-rbac.yaml
 #
@@ -9,9 +9,9 @@
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: bosun-sandbox
+  name: nightorder-sandbox
   labels:
-    app.kubernetes.io/managed-by: bosun
+    app.kubernetes.io/managed-by: nightorder
 automountServiceAccountToken: false
 # No Role / RoleBinding on purpose: sandbox jobs get ZERO Kubernetes API
 # permissions. The kernel (worker) creates/watches the Job; the playbook
@@ -23,13 +23,13 @@ automountServiceAccountToken: false
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: bosun-sandbox-default-deny
+  name: nightorder-sandbox-default-deny
   labels:
-    app.kubernetes.io/managed-by: bosun
+    app.kubernetes.io/managed-by: nightorder
 spec:
   podSelector:
     matchLabels:
-      bosun/component: sandbox
+      nightorder/component: sandbox
   policyTypes: ["Ingress", "Egress"]
   # no ingress/egress rules = deny all
 ---
@@ -38,14 +38,14 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: bosun-sandbox-egress-example
+  name: nightorder-sandbox-egress-example
   labels:
-    app.kubernetes.io/managed-by: bosun
+    app.kubernetes.io/managed-by: nightorder
 spec:
   podSelector:
     matchLabels:
-      bosun/component: sandbox
-      bosun/playbook: example-with-egress
+      nightorder/component: sandbox
+      nightorder/playbook: example-with-egress
   policyTypes: ["Egress"]
   egress:
     - to: []                      # DNS

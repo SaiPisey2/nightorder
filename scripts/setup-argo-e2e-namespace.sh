@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Creates an isolated namespace for Bosun Argo e2e tests.
+# Creates an isolated namespace for Nightorder Argo e2e tests.
 # Touches NOTHING shared: own namespace, own Role/RoleBinding on its default
-# SA. Tear down with: kubectl --context "$CTX" delete ns bosun-e2e
+# SA. Tear down with: kubectl --context "$CTX" delete ns nightorder-e2e
 set -euo pipefail
 
-CTX="${BOSUN_KUBE_CONTEXT:-my-staging-cluster}"
-NS="bosun-e2e"
+CTX="${NIGHTORDER_KUBE_CONTEXT:-my-staging-cluster}"
+NS="nightorder-e2e"
 
 kubectl --context "$CTX" apply -f - <<EOF
 apiVersion: v1
@@ -13,14 +13,14 @@ kind: Namespace
 metadata:
   name: ${NS}
   labels:
-    app.kubernetes.io/managed-by: bosun
-    purpose: bosun-e2e-testing
+    app.kubernetes.io/managed-by: nightorder
+    purpose: nightorder-e2e-testing
 ---
 # Argo >=3.5 emissary executor: workflow pods must report task results.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: bosun-workflow-executor
+  name: nightorder-workflow-executor
   namespace: ${NS}
 rules:
   - apiGroups: ["argoproj.io"]
@@ -30,12 +30,12 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: bosun-workflow-executor
+  name: nightorder-workflow-executor
   namespace: ${NS}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: bosun-workflow-executor
+  name: nightorder-workflow-executor
 subjects:
   - kind: ServiceAccount
     name: default

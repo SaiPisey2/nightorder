@@ -57,7 +57,7 @@ def test_lists_and_spec_content(client, project):
 def test_ui_served(client):
     resp = client.get("/ui/")
     assert resp.status_code == 200
-    assert "Bosun" in resp.text or "root" in resp.text
+    assert "Nightorder" in resp.text or "root" in resp.text
     # root redirects to the app
     resp = client.get("/", follow_redirects=False)
     assert resp.status_code in (302, 307)

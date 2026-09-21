@@ -1,4 +1,4 @@
-# Bosun — Architecture (Phases 1–3 implemented)
+# Nightorder — Architecture (Phases 1–3 implemented)
 
 Decisions recorded here map to the platform prompt (Stage A). The validation
 use case (rollup monthly pipeline) is modeled purely through public primitives —
@@ -54,7 +54,7 @@ flowchart TB
 
 ## Workflow Definition Model — (b) declarative spec
 
-Pipelines are versioned YAML documents (`bosun/v1`), validated + linted at
+Pipelines are versioned YAML documents (`nightorder/v1`), validated + linted at
 registration, stored in Postgres, interpreted by **one generic Temporal
 workflow** (`PipelineRunWorkflow`). Rationale: onboarding = writing a spec,
 not code; specs are diffable, validatable, renderable; the escape hatch for
@@ -72,7 +72,7 @@ covers "python between Argo steps" without breaking the model.
 | Extension loading, contract validation, execution isolation | (Phase 2+) AI agents via Agent Registry |
 
 **Registration mechanism: Python entry points.** A team ships a package with
-`[project.entry-points."bosun.step_executors"] my_thing = "pkg.mod:Class"`;
+`[project.entry-points."nightorder.step_executors"] my_thing = "pkg.mod:Class"`;
 installing the package into the worker image is the whole registration.
 Bad-extension containment: load-time ABC validation (non-conforming classes
 are skipped and logged), execution inside Activities with timeouts, failures
@@ -83,7 +83,7 @@ every spec, run, gate, event, quota is project-scoped; shared Temporal/Postgres.
 (Per-project Argo namespaces/SAs supported via step config `namespace:`.)
 **Open-platform mode (current default):** projects are namespaces, not auth
 boundaries — anyone can view, validate, and act across projects. Per-project
-API keys are still minted and stored; `BOSUN_AUTH=on` re-enables enforcement
+API keys are still minted and stored; `NIGHTORDER_AUTH=on` re-enables enforcement
 without code changes.
 
 **Compatibility.** `spec schema`, `contracts`, and `events` are public APIs —

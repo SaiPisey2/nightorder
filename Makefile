@@ -1,4 +1,4 @@
-# Bosun dev targets. Requires: uv, docker, temporal CLI.
+# Nightorder dev targets. Requires: uv, docker, temporal CLI.
 SHELL := /bin/bash
 
 .PHONY: install infra infra-down worker api test test-unit test-e2e demo clean
@@ -23,13 +23,13 @@ infra-down:
 	-pkill -f "temporal server start-dev"
 
 worker:           ## run the Temporal worker (loads all installed extensions)
-	uv run bosun-worker
+	uv run nightorder-worker
 
 api:              ## run the FastAPI control plane on :8400
-	uv run bosun-api
+	uv run nightorder-api
 
 relay:            ## outbox relay (Qdrant indexing; Kafka later)
-	uv run bosun-relay
+	uv run nightorder-relay
 
 test-unit:
 	uv run pytest tests/unit -q

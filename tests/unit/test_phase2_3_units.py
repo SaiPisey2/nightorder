@@ -1,5 +1,5 @@
-from bosun.ai.logreduce import reduce_log, score_line
-from bosun.sandbox import build_sandbox_job_manifest
+from nightorder.ai.logreduce import reduce_log, score_line
+from nightorder.sandbox import build_sandbox_job_manifest
 
 
 def test_score_kubernetes_signals_rank_highest():
@@ -33,7 +33,7 @@ def test_reduce_empty():
 
 
 def test_sandbox_manifest_hardening_complete():
-    m = build_sandbox_job_manifest(name="bosun-sbx-x", image="img:1", command=["sh", "-c", "true"],
+    m = build_sandbox_job_manifest(name="nightorder-sbx-x", image="img:1", command=["sh", "-c", "true"],
                                    env={"PARAM_A": "1"}, namespace="ns", timeout_seconds=300)
     pod = m["spec"]["template"]["spec"]
     container = pod["containers"][0]
@@ -41,7 +41,7 @@ def test_sandbox_manifest_hardening_complete():
     assert pod["securityContext"]["runAsNonRoot"] is True
     assert pod["securityContext"]["seccompProfile"]["type"] == "RuntimeDefault"
     assert pod["automountServiceAccountToken"] is False
-    assert pod["serviceAccountName"] == "bosun-sandbox"
+    assert pod["serviceAccountName"] == "nightorder-sandbox"
     assert container["securityContext"]["allowPrivilegeEscalation"] is False
     assert container["securityContext"]["readOnlyRootFilesystem"] is True
     assert container["securityContext"]["privileged"] is False

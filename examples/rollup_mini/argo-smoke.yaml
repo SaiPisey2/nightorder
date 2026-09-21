@@ -1,7 +1,7 @@
 # argo-smoke — proves the Argo executor against a real cluster with a tiny,
 # clearly-labeled, self-cleaning workflow (P2: one self-contained unit).
-# Requires: BOSUN_KUBE_CONTEXT set on the worker + access to an Argo ns.
-apiVersion: bosun/v1
+# Requires: NIGHTORDER_KUBE_CONTEXT set on the worker + access to an Argo ns.
+apiVersion: nightorder/v1
 kind: Pipeline
 name: argo-smoke
 project: batch
@@ -21,7 +21,7 @@ steps:
       # Isolated e2e namespace — created by scripts/setup-argo-e2e-namespace.sh.
       # Its default SA carries the workflowtaskresults executor Role that the
       # shared argo namespace's SAs are missing.
-      namespace: bosun-e2e
+      namespace: nightorder-e2e
       poll_seconds: 5
       timeout_seconds: 600
       manifest:
@@ -29,7 +29,7 @@ steps:
         kind: Workflow
         metadata:
           labels:
-            bosun/e2e-test: "true"
+            nightorder/e2e-test: "true"
         spec:
           entrypoint: main
           activeDeadlineSeconds: 300
@@ -43,7 +43,7 @@ steps:
                 # Cluster admission policy allows only mirrored registries.
                 image: alpine:latest
                 command: [sh, -c]
-                args: ["echo bosun e2e smoke {{params.yearmonth}} && sleep 5 && echo done"]
+                args: ["echo nightorder e2e smoke {{params.yearmonth}} && sleep 5 && echo done"]
                 resources:
                   requests: {cpu: 10m, memory: 32Mi}
                   limits: {cpu: 100m, memory: 64Mi}

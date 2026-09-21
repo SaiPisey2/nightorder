@@ -2,7 +2,7 @@
 # Purge e2e-* test projects (and all their data) from the local dev DB.
 set -euo pipefail
 
-docker exec -i bosun-postgres psql -U bosun <<'SQL'
+docker exec -i nightorder-postgres psql -U nightorder <<'SQL'
 BEGIN;
 CREATE TEMP TABLE doomed AS SELECT id FROM projects WHERE id LIKE 'e2e-%';
 DELETE FROM gate_token_nonces WHERE gate_id IN (SELECT id FROM gates WHERE project IN (SELECT id FROM doomed));

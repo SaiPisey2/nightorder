@@ -2,7 +2,7 @@ import time
 
 import pytest
 
-from bosun.api.security import TokenError, mint_gate_token, verify_gate_token
+from nightorder.api.security import TokenError, mint_gate_token, verify_gate_token
 
 
 def test_roundtrip():

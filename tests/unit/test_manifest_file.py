@@ -1,7 +1,7 @@
 import yaml
 
-from bosun.builtins.executors import ArgoWorkflowExecutor
-from bosun.contracts import StepContext
+from nightorder.builtins.executors import ArgoWorkflowExecutor
+from nightorder.contracts import StepContext
 
 
 def ctx() -> StepContext:
@@ -10,13 +10,13 @@ def ctx() -> StepContext:
 
 
 async def test_manifest_file_missing_fails_cleanly(monkeypatch, tmp_path):
-    monkeypatch.setenv("BOSUN_MANIFESTS_DIR", str(tmp_path))
+    monkeypatch.setenv("NIGHTORDER_MANIFESTS_DIR", str(tmp_path))
     result = await ArgoWorkflowExecutor().execute(ctx(), {"manifest_file": "nope.yaml"})
     assert result.status == "failed" and "not found" in result.logs
 
 
 async def test_manifest_file_path_traversal_blocked(monkeypatch, tmp_path):
-    monkeypatch.setenv("BOSUN_MANIFESTS_DIR", str(tmp_path / "manifests"))
+    monkeypatch.setenv("NIGHTORDER_MANIFESTS_DIR", str(tmp_path / "manifests"))
     (tmp_path / "manifests").mkdir()
     (tmp_path / "secret.yaml").write_text("kind: Workflow")
     result = await ArgoWorkflowExecutor().execute(ctx(), {"manifest_file": "../secret.yaml"})
@@ -24,7 +24,7 @@ async def test_manifest_file_path_traversal_blocked(monkeypatch, tmp_path):
 
 
 async def test_manifest_file_must_be_workflow(monkeypatch, tmp_path):
-    monkeypatch.setenv("BOSUN_MANIFESTS_DIR", str(tmp_path))
+    monkeypatch.setenv("NIGHTORDER_MANIFESTS_DIR", str(tmp_path))
     (tmp_path / "cm.yaml").write_text("kind: ConfigMap\nmetadata: {name: x}")
     result = await ArgoWorkflowExecutor().execute(ctx(), {"manifest_file": "cm.yaml"})
     assert result.status == "failed" and "not an Argo Workflow" in result.logs

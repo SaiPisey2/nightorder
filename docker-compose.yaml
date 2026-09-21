@@ -1,29 +1,29 @@
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: bosun-postgres
+    container_name: nightorder-postgres
     environment:
-      POSTGRES_USER: bosun
-      POSTGRES_PASSWORD: bosun
-      POSTGRES_DB: bosun
+      POSTGRES_USER: nightorder
+      POSTGRES_PASSWORD: nightorder
+      POSTGRES_DB: nightorder
     ports:
       - "5433:5432"   # 5433 to avoid clashing with any local postgres
     volumes:
-      - bosun-pgdata:/var/lib/postgresql/data
+      - nightorder-pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U bosun"]
+      test: ["CMD-SHELL", "pg_isready -U nightorder"]
       interval: 3s
       timeout: 3s
       retries: 20
 
   qdrant:
     image: qdrant/qdrant:v1.12.5
-    container_name: bosun-qdrant
+    container_name: nightorder-qdrant
     ports:
       - "6333:6333"
     volumes:
-      - bosun-qdrant:/qdrant/storage
+      - nightorder-qdrant:/qdrant/storage
 
 volumes:
-  bosun-pgdata:
-  bosun-qdrant:
+  nightorder-pgdata:
+  nightorder-qdrant:

@@ -25,7 +25,7 @@ def _pending_gate(client, project, run_id, timeout=60):
 def test_gate_token_single_use(client, project, stack):
     key = {"X-API-Key": project["key"]}
     spec = {
-        "apiVersion": "bosun/v1", "kind": "Pipeline", "name": "token-gate", "project": project["id"],
+        "apiVersion": "nightorder/v1", "kind": "Pipeline", "name": "token-gate", "project": project["id"],
         "steps": [{"id": "gated", "executor": "noop",
                    "gate": {"type": "sign_off", "prompt": "approve?", "channel": "log",
                             "timeout_minutes": 30, "on_timeout": "reject"}}],
@@ -35,8 +35,8 @@ def test_gate_token_single_use(client, project, stack):
     gate = _pending_gate(client, project, run["run_id"])
 
     # Mint a token exactly like the kernel does (same HMAC secret env).
-    os.environ["BOSUN_GATE_TOKEN_SECRET"] = stack["env"].get("BOSUN_GATE_TOKEN_SECRET", "dev-only-secret-change-me")
-    from bosun.api.security import mint_gate_token
+    os.environ["NIGHTORDER_GATE_TOKEN_SECRET"] = stack["env"].get("NIGHTORDER_GATE_TOKEN_SECRET", "dev-only-secret-change-me")
+    from nightorder.api.security import mint_gate_token
 
     token = mint_gate_token(gate["gate_id"], "approve")
     first = client.get("/gate-action", params={"token": token})
@@ -59,7 +59,7 @@ def test_gate_token_single_use(client, project, stack):
 def test_ai_advisor_diagnoses_failed_step(client, project):
     key = {"X-API-Key": project["key"]}
     spec = {
-        "apiVersion": "bosun/v1", "kind": "Pipeline", "name": "crash", "project": project["id"],
+        "apiVersion": "nightorder/v1", "kind": "Pipeline", "name": "crash", "project": project["id"],
         "steps": [{"id": "oom", "executor": "script",
                    "config": {"command": ["sh", "-c", "echo 'FATAL: java.lang.OutOfMemoryError: Java heap space'; exit 137"]},
                    "retry": {"maximum_attempts": 1}}],

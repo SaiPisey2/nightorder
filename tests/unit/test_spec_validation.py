@@ -1,11 +1,11 @@
 import pytest
 import yaml
 
-from bosun.contracts import load_registry
-from bosun.spec.validate import SpecValidationError, validate_spec_dict
+from nightorder.contracts import load_registry
+from nightorder.spec.validate import SpecValidationError, validate_spec_dict
 
 BASE = {
-    "apiVersion": "bosun/v1",
+    "apiVersion": "nightorder/v1",
     "kind": "Pipeline",
     "name": "t",
     "project": "p",

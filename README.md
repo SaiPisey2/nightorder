@@ -1,4 +1,4 @@
-# Bosun — Enterprise Workflow Orchestration Platform
+# Nightorder — Enterprise Workflow Orchestration Platform
 
 A general-purpose, framework-style orchestration platform: long-running operational
 pipelines defined as **declarative specs**, interpreted by **one generic Temporal
@@ -24,16 +24,16 @@ FastAPI (control plane)  →  Temporal (sole orchestration authority)
                      PostgreSQL (system of record + transactional outbox)
 ```
 
-- **Kernel** (`kernel/src/bosun/`): spec schema + validation, generic interpreter
+- **Kernel** (`kernel/src/nightorder/`): spec schema + validation, generic interpreter
   workflow, gate mechanics + signed action tokens, event emission (outbox), audit,
   extension registry, FastAPI.
 - **Extensions** (any pip-installable package): step executors, preflight checks,
   parameter resolvers, gate channels — registered via Python entry points, loaded
   by contract. See `examples/hello_world/` for a complete consuming-team package.
 - **Kafka deferred**: events land in Postgres `events` + `outbox` tables
-  transactionally; the `bosun-relay` process consumes the outbox (indexes
+  transactionally; the `nightorder-relay` process consumes the outbox (indexes
   knowledge into Qdrant today; Kafka producer slots into the same relay later).
-- **Phase 2 AI advisory** (`kernel/src/bosun/ai/`): failed step →
+- **Phase 2 AI advisory** (`kernel/src/nightorder/ai/`): failed step →
   **Incident Bundle** (executions, events, preflight history, params, reduced
   log, k8s events) → **Qdrant retrieval** of similar incidents → **LangGraph**
   supervisor routing Knowledge Retrieval → Troubleshooting (RCA with evidence)
@@ -41,7 +41,7 @@ FastAPI (control plane)  →  Temporal (sole orchestration authority)
   → remediation-approval gate. Read-only; never decides pass/fail (P6).
 - **Phase 2.5 learning**: `POST /incidents/{id}/outcome` captures what fixed
   it → knowledge record → async Qdrant index; retrieval quality measured as
-  hit@k / precision@1 against labeled ground truth (`bosun.ai.evaluate`).
+  hit@k / precision@1 against labeled ground truth (`nightorder.ai.evaluate`).
 - **Phase 3 execution**: pre-approved versioned **playbooks** (immutable image
   + fixed command) run in a hardened ephemeral K8s Job sandbox (non-root,
   read-only rootfs, no caps, no SA token, default-deny NetworkPolicy —
@@ -60,7 +60,7 @@ Full design rationale: `docs/architecture.md`. Team onboarding: `docs/onboarding
 ## Quick start
 
 ```bash
-cd bosun
+cd nightorder
 uv sync                 # install workspace (kernel + hello-world example)
 make infra              # postgres (docker, port 5433) + temporal dev server
 set -a; source .env; set +a   # secrets: gate HMAC, ANTHROPIC_API_KEY, kube context
@@ -111,7 +111,7 @@ to :8400).
 
 ```bash
 # 1. create a project (open platform — API keys are minted but NOT enforced;
-#    set BOSUN_AUTH=on on the API process to enforce them later)
+#    set NIGHTORDER_AUTH=on on the API process to enforce them later)
 curl -s -X POST localhost:8400/projects -H 'content-type: application/json' \
   -d '{"id":"hello","display_name":"Hello Team"}'
 export KEY=anything   # X-API-Key header is optional in open mode
@@ -164,10 +164,10 @@ make test-e2e      # boots worker+API+relay; Phase 1 pipelines (hello-world,
                    #   Phase 2 troubleshoot flow + Phase 2.5 learning/metric,
                    #   Phase 3 playbook guardrails
 
-# real-cluster tests (OPT-IN — isolated bosun-e2e namespace, self-cleaning):
+# real-cluster tests (OPT-IN — isolated nightorder-e2e namespace, self-cleaning):
 ./scripts/setup-argo-e2e-namespace.sh          # one-time ns + executor RBAC
-BOSUN_E2E_ARGO=1    uv run pytest tests/e2e/test_argo_gke.py -q       # Argo executor
-BOSUN_E2E_SANDBOX=1 uv run pytest tests/e2e/test_phase3_sandbox.py -q # sandbox Job
+NIGHTORDER_E2E_ARGO=1    uv run pytest tests/e2e/test_argo_gke.py -q       # Argo executor
+NIGHTORDER_E2E_SANDBOX=1 uv run pytest tests/e2e/test_phase3_sandbox.py -q # sandbox Job
 ```
 
 E2E logs land in `.e2e-logs/`. Postgres/Qdrant stay up between runs
@@ -207,15 +207,15 @@ Quick one-shot diagnosis without the full flow: `POST /runs/<RUN>/steps/<STEP>/d
 
 ```
 kernel/                     platform kernel (teams never modify)
-  src/bosun/spec/         pipeline spec schema + lint (public API, semver'd)
-  src/bosun/contracts/    extension ABCs + entry-point registry (public API)
-  src/bosun/temporal/     generic interpreter workflow, activities, worker
-  src/bosun/api/          FastAPI control plane + signed gate tokens
-  src/bosun/builtins/     built-in executors/checks/resolvers/channels
-  src/bosun/advisor/      read-only AI failure advisor (Phase 2 seed)
-  src/bosun/ai/           Phase 2: bundle, log reduction, knowledge, agents, metric
-  src/bosun/sandbox.py    Phase 3: hardened K8s Job sandbox
-  src/bosun/relay.py      outbox consumer (Qdrant indexing; Kafka slot-in)
+  src/nightorder/spec/         pipeline spec schema + lint (public API, semver'd)
+  src/nightorder/contracts/    extension ABCs + entry-point registry (public API)
+  src/nightorder/temporal/     generic interpreter workflow, activities, worker
+  src/nightorder/api/          FastAPI control plane + signed gate tokens
+  src/nightorder/builtins/     built-in executors/checks/resolvers/channels
+  src/nightorder/advisor/      read-only AI failure advisor (Phase 2 seed)
+  src/nightorder/ai/           Phase 2: bundle, log reduction, knowledge, agents, metric
+  src/nightorder/sandbox.py    Phase 3: hardened K8s Job sandbox
+  src/nightorder/relay.py      outbox consumer (Qdrant indexing; Kafka slot-in)
 ui/                         React SPA (Vite + React Flow) — served at /ui
 examples/hello_world/       a consuming team's package — the framework contract test
 examples/rollup_mini/          rollup-shaped dummy pipeline + real-Argo smoke spec
@@ -229,21 +229,21 @@ docs/                       architecture + onboarding guide
 
 | Var | Default | Purpose |
 |---|---|---|
-| `BOSUN_DATABASE_URL` | `postgresql+asyncpg://bosun:bosun@localhost:5433/bosun` | Postgres |
+| `NIGHTORDER_DATABASE_URL` | `postgresql+asyncpg://nightorder:nightorder@localhost:5433/nightorder` | Postgres |
 | `TEMPORAL_ADDRESS` | `localhost:7233` | Temporal frontend |
-| `BOSUN_API_BASE_URL` | `http://localhost:8400` | Base for gate action links |
-| `BOSUN_GATE_TOKEN_SECRET` | dev default — set in prod | HMAC key for gate tokens |
-| `BOSUN_KUBE_CONTEXT` | current context | Kube context for the argo executor |
-| `BOSUN_ARGO_NAMESPACE` | `argo` | Default Argo namespace |
-| `BOSUN_MANIFESTS_DIR` | `manifests` | Folder the argo executor resolves `manifest_file:` against (worker-side) |
+| `NIGHTORDER_API_BASE_URL` | `http://localhost:8400` | Base for gate action links |
+| `NIGHTORDER_GATE_TOKEN_SECRET` | dev default — set in prod | HMAC key for gate tokens |
+| `NIGHTORDER_KUBE_CONTEXT` | current context | Kube context for the argo executor |
+| `NIGHTORDER_ARGO_NAMESPACE` | `argo` | Default Argo namespace |
+| `NIGHTORDER_MANIFESTS_DIR` | `manifests` | Folder the argo executor resolves `manifest_file:` against (worker-side) |
 | `ANTHROPIC_API_KEY` | — | Enables `/troubleshoot` + `/diagnose` AI endpoints |
-| `BOSUN_QDRANT_URL` | `http://localhost:6333` | Qdrant semantic memory |
-| `BOSUN_SANDBOX_NAMESPACE` | `bosun-e2e` | Namespace for sandbox Jobs |
-| `BOSUN_TEAMS_WEBHOOK_URL` | — | Power Automate webhook; enables the `teams` gate channel default + relay alerts |
-| `BOSUN_TEAMS_ALERT_EVENTS` | `WorkflowFailed,GateRequested,RemediationSuggested,GateExpired` | Events the relay forwards to Teams |
-| `BOSUN_TEAMS_ALERT_MENTIONS` | — | Emails to @mention on alert cards (csv) |
-| `BOSUN_AUTH` | `off` | `on` = enforce per-project API keys (open platform by default) |
-| `BOSUN_ADMIN_KEY` | unset (open in dev) | Protects `POST /projects`, agent toggles |
+| `NIGHTORDER_QDRANT_URL` | `http://localhost:6333` | Qdrant semantic memory |
+| `NIGHTORDER_SANDBOX_NAMESPACE` | `nightorder-e2e` | Namespace for sandbox Jobs |
+| `NIGHTORDER_TEAMS_WEBHOOK_URL` | — | Power Automate webhook; enables the `teams` gate channel default + relay alerts |
+| `NIGHTORDER_TEAMS_ALERT_EVENTS` | `WorkflowFailed,GateRequested,RemediationSuggested,GateExpired` | Events the relay forwards to Teams |
+| `NIGHTORDER_TEAMS_ALERT_MENTIONS` | — | Emails to @mention on alert cards (csv) |
+| `NIGHTORDER_AUTH` | `off` | `on` = enforce per-project API keys (open platform by default) |
+| `NIGHTORDER_ADMIN_KEY` | unset (open in dev) | Protects `POST /projects`, agent toggles |
 
 ## Scope notes (deliberate)
 

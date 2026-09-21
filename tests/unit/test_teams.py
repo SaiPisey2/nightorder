@@ -1,4 +1,4 @@
-from bosun.teams import build_adaptive_card, _display_name
+from nightorder.teams import build_adaptive_card, _display_name
 
 
 def test_display_name():

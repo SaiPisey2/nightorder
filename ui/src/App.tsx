@@ -46,7 +46,7 @@ function Login({ onDone }: { onDone: (s: Session) => void }) {
   return (
     <div className="login-wrap">
       <div className="card login">
-        <h3>Bosun <span className="muted">— open platform, pick a project</span></h3>
+        <h3>Nightorder <span className="muted">— open platform, pick a project</span></h3>
         {error && <div className="error-banner">{error}</div>}
         <label>Your name (recorded on gate approvals / audit trail)</label>
         <input value={actor} onChange={(e) => setActor(e.target.value)} placeholder="you@example.com" />

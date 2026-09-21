@@ -3,7 +3,7 @@
 # computed params, preflight file check, budget gate, locale fan-out with
 # tiers + shared quota, designed re-run until "queue drained", manual step.
 # Local-testable: every step is a script; swap executors to `argo` in prod.
-apiVersion: bosun/v1
+apiVersion: nightorder/v1
 kind: Pipeline
 name: rollup-mini
 project: batch
@@ -23,7 +23,7 @@ parameters:
     value: [us_en, uk_en, de_de, fr_fr]
   - name: workdir
     resolver: static
-    value: /tmp/bosun-demo
+    value: /tmp/nightorder-demo
   - name: serp_cost_usd
     resolver: activity
     activity: command

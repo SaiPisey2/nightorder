@@ -12,7 +12,7 @@ const SUGGESTIONS = [
 ];
 
 function storageKey(project: string) {
-  return `bosun.chat.${project}`;
+  return `nightorder.chat.${project}`;
 }
 
 // Minimal renderer: fenced code blocks get <pre> + an "open in editor" button
@@ -93,7 +93,7 @@ export default function Chat({ session, goPipelines }: { session: Session; goPip
   }
 
   function openYaml(yaml: string) {
-    localStorage.setItem("bosun.editor-draft", yaml);
+    localStorage.setItem("nightorder.editor-draft", yaml);
     goPipelines();
   }
 

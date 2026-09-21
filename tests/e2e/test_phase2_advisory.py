@@ -66,7 +66,7 @@ def test_phase2_troubleshoot_and_phase25_learning(client, project):
 
     # 1. a step that fails like the PVC incident
     spec = {
-        "apiVersion": "bosun/v1", "kind": "Pipeline", "name": "pvc-crash", "project": project["id"],
+        "apiVersion": "nightorder/v1", "kind": "Pipeline", "name": "pvc-crash", "project": project["id"],
         "steps": [{"id": "serp-results", "executor": "script",
                    "config": {"command": ["sh", "-c",
                               "echo 'writing dataset for locale us_en'; "
@@ -130,7 +130,7 @@ def test_phase2_troubleshoot_and_phase25_learning(client, project):
 
     # 5. Phase 2.5 retrieval-quality metric against ground truth
     import asyncio
-    from bosun.ai.evaluate import LabeledQuery, evaluate_retrieval
+    from nightorder.ai.evaluate import LabeledQuery, evaluate_retrieval
 
     labeled = [
         LabeledQuery("no space left on device dataset silently wrong",

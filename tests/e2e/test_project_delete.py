@@ -8,7 +8,7 @@ def test_delete_project_cascades(client, project):
 
     # populate: spec, a running run (gated → stays running), knowledge, playbook
     spec = {
-        "apiVersion": "bosun/v1", "kind": "Pipeline", "name": "doomed", "project": pid,
+        "apiVersion": "nightorder/v1", "kind": "Pipeline", "name": "doomed", "project": pid,
         "steps": [{"id": "wait", "executor": "noop",
                    "gate": {"type": "sign_off", "prompt": "never resolved", "channel": "log",
                             "timeout_minutes": 600, "on_timeout": "reject"}}],

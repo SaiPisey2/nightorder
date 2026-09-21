@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Session, api } from "../api";
 import { timeAgo, usePoll } from "../hooks";
 
-const TEMPLATE = `apiVersion: bosun/v1
+const TEMPLATE = `apiVersion: nightorder/v1
 kind: Pipeline
 name: my-pipeline
 project: PROJECT
@@ -35,9 +35,9 @@ export default function Pipelines({ session, openRun }: { session: Session; open
 
   // Draft handed over from the Assistant ("open in spec editor")
   useEffect(() => {
-    const draft = localStorage.getItem("bosun.editor-draft");
+    const draft = localStorage.getItem("nightorder.editor-draft");
     if (draft) {
-      localStorage.removeItem("bosun.editor-draft");
+      localStorage.removeItem("nightorder.editor-draft");
       setYaml(draft);
       setEditorOpen(true);
       setMessage("Draft loaded from the Assistant — validate, then register.");

@@ -1,19 +1,19 @@
 [project]
-name = "bosun-workspace"
+name = "nightorder-workspace"
 version = "0.1.0"
-description = "Bosun - Enterprise Agentic Workflow Orchestration Platform (workspace root)"
+description = "Nightorder - Enterprise Agentic Workflow Orchestration Platform (workspace root)"
 requires-python = ">=3.12"
 dependencies = [
-    "bosun",
-    "bosun-example-hello-world",
+    "nightorder",
+    "nightorder-example-hello-world",
 ]
 
 [tool.uv.workspace]
 members = ["kernel", "examples/hello_world"]
 
 [tool.uv.sources]
-bosun = { workspace = true }
-bosun-example-hello-world = { workspace = true }
+nightorder = { workspace = true }
+nightorder-example-hello-world = { workspace = true }
 
 [dependency-groups]
 dev = [

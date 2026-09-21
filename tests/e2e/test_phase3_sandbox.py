@@ -3,8 +3,8 @@
 Local part (always runs with ANTHROPIC key): playbook registry, execution
 guardrails — no execution without approved gate, no params outside allow-list.
 
-Cluster part (opt-in BOSUN_E2E_SANDBOX=1): approved playbook actually runs
-in the hardened sandbox Job on the staging cluster's bosun-e2e namespace.
+Cluster part (opt-in NIGHTORDER_E2E_SANDBOX=1): approved playbook actually runs
+in the hardened sandbox Job on the staging cluster's nightorder-e2e namespace.
 """
 import os
 import subprocess
@@ -28,7 +28,7 @@ def _make_incident(client, project) -> dict:
     """Failed run + troubleshoot → incident with remediation gate."""
     key = {"X-API-Key": project["key"]}
     spec = {
-        "apiVersion": "bosun/v1", "kind": "Pipeline", "name": "crash3", "project": project["id"],
+        "apiVersion": "nightorder/v1", "kind": "Pipeline", "name": "crash3", "project": project["id"],
         "steps": [{"id": "boom", "executor": "script",
                    "config": {"command": ["sh", "-c", "echo 'FATAL: loading agent on wrong cluster'; exit 1"]},
                    "retry": {"maximum_attempts": 1}}],
@@ -76,13 +76,13 @@ def test_playbook_registry_and_execution_guardrails(client, project):
     assert r.status_code == 404
 
 
-@pytest.mark.skipif(os.environ.get("BOSUN_E2E_SANDBOX") != "1",
-                    reason="cluster sandbox test is opt-in: BOSUN_E2E_SANDBOX=1")
+@pytest.mark.skipif(os.environ.get("NIGHTORDER_E2E_SANDBOX") != "1",
+                    reason="cluster sandbox test is opt-in: NIGHTORDER_E2E_SANDBOX=1")
 def test_sandbox_execution_on_cluster(client, project, stack):
     key = {"X-API-Key": project["key"]}
-    kube_context = stack["env"].get("BOSUN_KUBE_CONTEXT", "")
+    kube_context = stack["env"].get("NIGHTORDER_KUBE_CONTEXT", "")
     # sandbox SA + default-deny NetworkPolicy into the e2e namespace (idempotent)
-    subprocess.run(["kubectl", "--context", kube_context, "-n", "bosun-e2e",
+    subprocess.run(["kubectl", "--context", kube_context, "-n", "nightorder-e2e",
                     "apply", "-f", str(ROOT / "k8s/sandbox/sandbox-rbac.yaml")],
                    check=True, capture_output=True, timeout=60)
 
@@ -98,7 +98,7 @@ def test_sandbox_execution_on_cluster(client, project, stack):
 
     r = client.post(f"/incidents/{incident['incident_id']}/execute",
                     json={"playbook": "echo-fix", "params": {"target": "ch1-s1r1"},
-                          "namespace": "bosun-e2e", "timeout_seconds": 300}, headers=key)
+                          "namespace": "nightorder-e2e", "timeout_seconds": 300}, headers=key)
     assert r.status_code == 202, r.text
     assert r.json()["playbook"] == "echo-fix@v1"
 
@@ -118,6 +118,6 @@ def test_sandbox_execution_on_cluster(client, project, stack):
         assert expected in events, f"missing {expected}"
 
     # cleanup sandbox job (ttl would handle it anyway)
-    subprocess.run(["kubectl", "--context", kube_context, "-n", "bosun-e2e",
-                    "delete", "job", "-l", "bosun/component=sandbox", "--ignore-not-found"],
+    subprocess.run(["kubectl", "--context", kube_context, "-n", "nightorder-e2e",
+                    "delete", "job", "-l", "nightorder/component=sandbox", "--ignore-not-found"],
                    check=False, capture_output=True, timeout=60)
