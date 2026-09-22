@@ -39,7 +39,7 @@ flowchart LR
     WORKER -- "gate reached,<br/>run pauses" --> PERSON(["a person"])
     PERSON -- "signed single-use link" --> API
 
-    DB --> OUTBOX["outbox"] --> RELAY["relay"] --> QDRANT[("Qdrant")]
+    DB --> RELAY["relay<br/>drains the outbox"] --> QDRANT[("Qdrant")]
 ```
 
 The control plane never orchestrates. It validates, records and signals; Temporal owns
