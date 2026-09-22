@@ -15,6 +15,7 @@ from typing import Any
 import httpx
 
 from nightorder.contracts.base import GateChannel, GateNotification
+from nightorder.net import check_outbound_url
 
 log = logging.getLogger("nightorder.gates")
 
@@ -82,6 +83,7 @@ class WebhookChannel(GateChannel):
                 {"@type": "OpenUri", "name": "Reject", "targets": [{"os": "default", "uri": notification.reject_url}]},
             ],
         }
+        check_outbound_url(url)
         async with httpx.AsyncClient(timeout=30) as client:
             resp = await client.post(url, json=card)
             resp.raise_for_status()

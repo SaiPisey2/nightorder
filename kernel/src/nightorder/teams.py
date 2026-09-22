@@ -15,6 +15,8 @@ from typing import Any
 
 import httpx
 
+from nightorder.net import check_outbound_url
+
 log = logging.getLogger("nightorder.teams")
 
 
@@ -84,6 +86,7 @@ def build_adaptive_card(
 async def post_to_teams(webhook_url: str, message: dict[str, Any]) -> None:
     """POST the message envelope to the Power Automate flow. Raises on failure
     so callers can decide whether delivery is best-effort or fatal."""
+    check_outbound_url(webhook_url)
     async with httpx.AsyncClient(timeout=30) as client:
         resp = await client.post(webhook_url, json=message)
         if resp.status_code >= 300:

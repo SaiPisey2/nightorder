@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import os
 import shlex
 from typing import Any
 
@@ -245,13 +246,19 @@ class RemoteExecExecutor(StepExecutor):
         sentinel = f"/tmp/nightorder-{key_digest}.done"
         guarded = f"if [ -e {sentinel} ]; then echo NIGHTORDER_ALREADY_RAN; else ({command}) && touch {sentinel}; fi"
         try:
-            async with asyncssh.connect(
-                host,
-                port=int(config.get("port", 22)),
-                username=config.get("user"),
-                known_hosts=None,
-                connect_timeout=30,
-            ) as conn:
+            connect_kwargs: dict[str, Any] = {
+                "port": int(config.get("port", 22)),
+                "username": config.get("user"),
+                "connect_timeout": 30,
+            }
+            # Verify the host key by default. asyncssh checks ~/.ssh/known_hosts
+            # when `known_hosts` is not passed; passing None disables the check
+            # entirely, which is what this used to do unconditionally.
+            if os.environ.get("NIGHTORDER_SSH_INSECURE_NO_HOST_KEY_CHECK") == "1":
+                connect_kwargs["known_hosts"] = None
+            elif os.environ.get("NIGHTORDER_SSH_KNOWN_HOSTS"):
+                connect_kwargs["known_hosts"] = os.environ["NIGHTORDER_SSH_KNOWN_HOSTS"]
+            async with asyncssh.connect(host, **connect_kwargs) as conn:
                 result = await asyncio.wait_for(conn.run(guarded), timeout=timeout)
         except Exception as e:
             return ExecutionResult(status="failed", logs=f"remote_exec error: {e}")
