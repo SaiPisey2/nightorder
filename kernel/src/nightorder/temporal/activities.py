@@ -19,6 +19,7 @@ from nightorder import events as ev
 from nightorder.config import settings
 from nightorder.contracts import StepContext, load_registry
 from nightorder.db import Event, Gate, Outbox, ResolvedParameter, Run, StepExecution, get_session
+from nightorder.spec.expressions import evaluate as evaluate_expression
 
 log = logging.getLogger(__name__)
 
@@ -142,8 +143,9 @@ async def resolve_parameter(input: dict) -> dict:
     elif resolver == "override":
         value, provenance = param.get("value"), f"run override by {param.get('actor', 'api')}"
     elif resolver == "expression":
-        # Deterministic expression over previously resolved params; no builtins.
-        value = eval(param["expression"], {"__builtins__": {}}, {"params": dict(input.get("params", {}))})  # noqa: S307
+        # Deterministic expression over previously resolved params, evaluated by
+        # a node allowlist rather than eval() — see nightorder.spec.expressions.
+        value = evaluate_expression(param["expression"], dict(input.get("params", {})))
         provenance = f"expression: {param['expression']}"
     elif resolver == "activity":
         registry = load_registry()
