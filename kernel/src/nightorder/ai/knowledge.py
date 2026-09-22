@@ -44,6 +44,11 @@ def _search_sync(project: str, query: str, limit: int, kind: str | None) -> list
     if kind:
         must.append(models.FieldCondition(key="kind", match=models.MatchValue(value=kind)))
     try:
+        # client.add()/client.query() are a matched pair from qdrant-client's
+        # fastembed convenience API: add() names the vector after the model, and
+        # query() knows that name. query() carries a deprecation notice, but
+        # add() does not, so migrating only this half would search a vector name
+        # the writer never used. Migrate both together or neither.
         hits = client.query(
             collection_name=COLLECTION,
             query_text=query,
