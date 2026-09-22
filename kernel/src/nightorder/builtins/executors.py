@@ -8,22 +8,12 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
-import re
 import shlex
 from typing import Any
 
 from nightorder.config import settings
+from nightorder.redaction import redact  # re-exported: callers import it from here
 from nightorder.contracts.base import ExecutionResult, StepContext, StepExecutor
-
-_SECRET_PATTERN = re.compile(
-    r"(?i)((?:api[_-]?key|token|password|secret|authorization)[\"'=:\s]+)([^\s\"']{8,})"
-)
-
-
-def redact(text: str) -> str:
-    """Redact known secret patterns before persistence (cross-cutting req)."""
-    return _SECRET_PATTERN.sub(r"\1[REDACTED]", text)
-
 
 def _render(value: Any, ctx: StepContext) -> Any:
     """Substitute {{params.x}} and {{item}} templates in step config."""
