@@ -19,8 +19,8 @@ from sqlalchemy import select
 from temporalio.client import Client, Schedule, ScheduleActionStartWorkflow, ScheduleSpec as TScheduleSpec
 
 from nightorder import TASK_QUEUE, __version__
-from nightorder.api.security import TokenError, mint_gate_token, verify_gate_token
-from nightorder.config import settings
+from nightorder.api.security import TokenError, mint_gate_token, secret_matches, verify_gate_token
+from nightorder.config import auth_enabled, log_runtime_config, settings
 from nightorder.contracts import load_registry
 from nightorder.db import (
     Event,
@@ -63,6 +63,7 @@ async def temporal_client() -> Client:
 
 @app.on_event("startup")
 async def _startup() -> None:
+    log_runtime_config()
     await init_db()
     # Seed the Agent Registry (scaffolded Phase 1, activated Phase 2).
     from nightorder.ai.agents import DEFAULT_AGENTS
@@ -82,16 +83,12 @@ async def _startup() -> None:
 # Open platform mode (default): anyone can view, validate, and act; projects
 # are an organizational boundary, not an auth boundary. Set NIGHTORDER_AUTH=on
 # to enforce per-project API keys again.
-def auth_enabled() -> bool:
-    return os.environ.get("NIGHTORDER_AUTH", "off").lower() == "on"
-
-
 async def require_project(project: str, x_api_key: str = Header(default="")) -> Project:
     async with get_session() as session:
         row = await session.get(Project, project)
     if row is None:
         raise HTTPException(404, f"project '{project}' not found")
-    if auth_enabled() and row.api_key != x_api_key:
+    if auth_enabled() and not secret_matches(x_api_key, row.api_key):
         raise HTTPException(403, "invalid API key for project")
     return row
 
@@ -102,7 +99,7 @@ async def project_for_run(run_id: str, x_api_key: str = Header(default="")) -> R
         if run is None:
             raise HTTPException(404, "run not found")
         project = await session.get(Project, run.project)
-    if auth_enabled() and (project is None or project.api_key != x_api_key):
+    if auth_enabled() and (project is None or not secret_matches(x_api_key, project.api_key)):
         raise HTTPException(403, "invalid API key for run's project")
     return run
 
@@ -206,7 +203,7 @@ class ProjectCreate(BaseModel):
 @app.post("/projects", status_code=201)
 async def create_project(body: ProjectCreate, x_admin_key: str = Header(default="")) -> dict:
     admin_key = os.environ.get("NIGHTORDER_ADMIN_KEY", "")
-    if admin_key and x_admin_key != admin_key:
+    if admin_key and not secret_matches(x_admin_key, admin_key):
         raise HTTPException(403, "invalid admin key")
     api_key = uuid.uuid4().hex
     async with get_session() as session:
@@ -621,7 +618,7 @@ async def resolve_gate(gate_id: str, body: GateResolve, x_api_key: str = Header(
         if gate is None:
             raise HTTPException(404, "gate not found")
         project = await session.get(Project, gate.project)
-    if auth_enabled() and (project is None or project.api_key != x_api_key):
+    if auth_enabled() and (project is None or not secret_matches(x_api_key, project.api_key)):
         raise HTTPException(403, "invalid API key for gate's project")
     return await _apply_gate_decision(gate_id, body.decision, body.actor, body.note)
 
@@ -782,7 +779,7 @@ class AgentToggle(BaseModel):
 @app.post("/agents/{agent_id}/toggle")
 async def toggle_agent(agent_id: str, body: AgentToggle, x_admin_key: str = Header(default="")) -> dict:
     admin_key = os.environ.get("NIGHTORDER_ADMIN_KEY", "")
-    if admin_key and x_admin_key != admin_key:
+    if admin_key and not secret_matches(x_admin_key, admin_key):
         raise HTTPException(403, "invalid admin key")
     from nightorder.db import AgentRecord
 
@@ -826,7 +823,7 @@ async def get_incident(incident_id: str, x_api_key: str = Header(default="")) ->
         if incident is None:
             raise HTTPException(404, "incident not found")
         project = await session.get(Project, incident.project)
-    if auth_enabled() and (project is None or project.api_key != x_api_key):
+    if auth_enabled() and (project is None or not secret_matches(x_api_key, project.api_key)):
         raise HTTPException(403, "invalid API key")
     return {
         "id": incident.id, "project": incident.project, "run_id": incident.run_id,
@@ -858,7 +855,7 @@ async def report_outcome(incident_id: str, body: OutcomeReport, x_api_key: str =
         if incident is None:
             raise HTTPException(404, "incident not found")
         project = await session.get(Project, incident.project)
-        if auth_enabled() and (project is None or project.api_key != x_api_key):
+        if auth_enabled() and (project is None or not secret_matches(x_api_key, project.api_key)):
             raise HTTPException(403, "invalid API key")
         incident.outcome = body.outcome
         incident.status = "executed" if body.success else "failed"
@@ -947,7 +944,7 @@ async def execute_remediation(incident_id: str, body: ExecuteRemediation,
         if incident is None:
             raise HTTPException(404, "incident not found")
         project = await session.get(Project, incident.project)
-        if auth_enabled() and (project is None or project.api_key != x_api_key):
+        if auth_enabled() and (project is None or not secret_matches(x_api_key, project.api_key)):
             raise HTTPException(403, "invalid API key")
         gate = await session.get(Gate, incident.gate_id) if incident.gate_id else None
         if gate is None or gate.status != "approved":
@@ -1063,7 +1060,12 @@ if os.path.isdir(_UI_DIST):
 def main() -> None:
     import uvicorn
 
-    uvicorn.run("nightorder.api.main:app", host="0.0.0.0", port=int(os.environ.get("NIGHTORDER_API_PORT", "8400")))
+    # Loopback by default: the control plane is open unless NIGHTORDER_AUTH=on,
+    # so it should not reach the network until someone asks for that. Set
+    # NIGHTORDER_API_HOST=0.0.0.0 to bind all interfaces (containers need this).
+    host = os.environ.get("NIGHTORDER_API_HOST", "127.0.0.1")
+    port = int(os.environ.get("NIGHTORDER_API_PORT", "8400"))
+    uvicorn.run("nightorder.api.main:app", host=host, port=port)
 
 
 if __name__ == "__main__":

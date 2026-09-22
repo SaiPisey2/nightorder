@@ -30,6 +30,16 @@ class GateAction:
     nonce: str
 
 
+def secret_matches(provided: str, expected: str) -> bool:
+    """Constant-time credential comparison.
+
+    A plain `==` on a secret leaks its length and its matching prefix through
+    timing. These are short-lived keys over a network, so the signal is weak —
+    but the fix is one call, so there is no reason to leave it.
+    """
+    return hmac.compare_digest((provided or "").encode(), (expected or "").encode())
+
+
 def _sign(payload: bytes) -> str:
     return hmac.new(settings().gate_token_secret.encode(), payload, hashlib.sha256).hexdigest()
 

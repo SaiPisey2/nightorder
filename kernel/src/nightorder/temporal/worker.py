@@ -9,7 +9,7 @@ from temporalio.client import Client
 from temporalio.worker import Worker
 
 from nightorder import TASK_QUEUE
-from nightorder.config import settings
+from nightorder.config import log_runtime_config, settings
 from nightorder.contracts import load_registry
 from nightorder.db import init_db
 from nightorder.temporal.activities import ALL_ACTIVITIES
@@ -36,6 +36,7 @@ async def run_worker() -> None:
 
 
 def main() -> None:
+    log_runtime_config()
     asyncio.run(run_worker())
 
 
