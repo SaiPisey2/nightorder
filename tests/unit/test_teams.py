@@ -9,7 +9,7 @@ def test_display_name():
 def test_card_with_mentions_buttons_facts():
     msg = build_adaptive_card(
         title="Approval required — budget_approval",
-        body="Cost 31000 USD exceeds 27000 USD.",
+        body="Cost 31000 USD exceeds 15000 USD.",
         facts={"project": "batch", "step": "cost-approval"},
         buttons=[{"title": "Approve", "url": "http://x/approve"},
                  {"title": "Reject", "url": "http://x/reject"}],

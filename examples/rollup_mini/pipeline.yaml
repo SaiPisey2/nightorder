@@ -24,7 +24,7 @@ parameters:
   - name: workdir
     resolver: static
     value: /tmp/nightorder-demo
-  - name: serp_cost_usd
+  - name: collection_cost_usd
     resolver: activity
     activity: command
     params: {command: "echo 31000"}   # pretend cost calculator script
@@ -45,23 +45,23 @@ steps:
     config: {command: ["sh", "-c", "echo aggregating {{params.yearmonth}} vs {{params.prev_yearmonth}}"]}
     depends_on: [prepare]
     preflight:
-      - check: file_exists            # DFS feed file present (silent-failure killer)
+      - check: file_exists            # feed file present (silent-failure killer)
         params: {path: "{{params.workdir}}/feed-{{params.yearmonth}}.ready"}
         on_fail: block
 
   - id: cost-approval
-    name: SERP collection cost gate ($27k standing budget)
+    name: Collection cost gate (standing budget)
     executor: noop
     depends_on: [pre-aggregation]
     gate:
       type: budget_approval
-      prompt: "Computed SERP cost {{params.serp_cost_usd}} USD exceeds standing budget 27000 USD. Approve collection?"
+      prompt: "Computed collection cost {{params.collection_cost_usd}} USD exceeds standing budget 15000 USD. Approve collection?"
       channel: log
       timeout_minutes: 120
       on_timeout: reject
 
-  - id: sv-collection
-    name: SV collection per locale (run twice until queue drains)
+  - id: metrics-collection
+    name: Metrics collection per locale (run twice until queue drains)
     executor: script
     config: {command: ["sh", "-c", "echo collect {{item}} >> {{params.workdir}}/queue.log"]}
     depends_on: [cost-approval]
@@ -75,7 +75,7 @@ steps:
     name: Designed re-run until queue drained
     executor: script
     config: {command: ["sh", "-c", "echo drain-pass >> {{params.workdir}}/queue.log"]}
-    depends_on: [sv-collection]
+    depends_on: [metrics-collection]
     repeat:
       until_check: command_succeeds
       params: {command: ["sh", "-c", "[ $(wc -l < {{params.workdir}}/queue.log) -ge 6 ]"]}
@@ -94,10 +94,10 @@ steps:
       on_timeout: reject
 
   - id: update-count-sheet
-    name: Update count sheet (human, outside platform)
+    name: Update tracking sheet (human, outside platform)
     executor: manual
     config:
-      instructions: "Update the SharePoint count sheet for {{params.yearmonth}}, then confirm."
+      instructions: "Update the shared tracking sheet for {{params.yearmonth}}, then confirm."
       channel: log
     depends_on: [qa-signoff]
     timeout_minutes: 240

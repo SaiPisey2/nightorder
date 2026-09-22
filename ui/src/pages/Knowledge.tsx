@@ -122,7 +122,7 @@ export default function Knowledge({ session }: { session: Session }) {
         </select>
         <label>Title</label>
         <input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })}
-               placeholder="serp_get_results fails silently when PVC undersized" />
+               placeholder="fetch_results fails silently when the volume is undersized" />
         <label>Content</label>
         <textarea style={{ minHeight: 140 }} value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })}
                   placeholder="Symptoms, root cause, fix, verification…" />

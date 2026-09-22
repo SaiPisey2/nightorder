@@ -44,19 +44,19 @@ def _make_incident(client, project) -> dict:
 def test_playbook_registry_and_execution_guardrails(client, project):
     key = {"X-API-Key": project["key"]}
     # register playbook v1, then v2
-    body = {"name": "restart-loading-agent", "description": "supervisorctl restart rollup_loading_agent",
+    body = {"name": "restart-loader-agent", "description": "restart the loader agent",
             "image": ALPINE, "command": ["sh", "-c", "echo restarting on $PARAM_HOST && echo done"],
             "allowed_params": {"host": "target CH host"}, "approved_by": "platform-lead"}
     assert client.post(f"/projects/{project['id']}/playbooks", json=body, headers=key).json()["version"] == 1
     assert client.post(f"/projects/{project['id']}/playbooks", json=body, headers=key).json()["version"] == 2
     books = client.get(f"/projects/{project['id']}/playbooks", headers=key).json()
-    assert any(b["name"] == "restart-loading-agent" and b["version"] == 2 for b in books)
+    assert any(b["name"] == "restart-loader-agent" and b["version"] == 2 for b in books)
 
     incident = _make_incident(client, project)
 
     # guardrail 1: cannot execute before the gate is approved
     r = client.post(f"/incidents/{incident['incident_id']}/execute",
-                    json={"playbook": "restart-loading-agent", "params": {"host": "ch1-s1r1"}},
+                    json={"playbook": "restart-loader-agent", "params": {"host": "node-a1"}},
                     headers=key)
     assert r.status_code == 409, r.text
 
@@ -66,8 +66,8 @@ def test_playbook_registry_and_execution_guardrails(client, project):
 
     # guardrail 2: params outside the allow-list rejected
     r = client.post(f"/incidents/{incident['incident_id']}/execute",
-                    json={"playbook": "restart-loading-agent",
-                          "params": {"host": "ch1", "evil": "rm -rf /"}}, headers=key)
+                    json={"playbook": "restart-loader-agent",
+                          "params": {"host": "node-a", "evil": "rm -rf /"}}, headers=key)
     assert r.status_code == 422 and "evil" in r.text
 
     # guardrail 3: unknown playbook rejected
@@ -97,7 +97,7 @@ def test_sandbox_execution_on_cluster(client, project, stack):
                 json={"decision": "approve", "actor": "oncall"}, headers=key).raise_for_status()
 
     r = client.post(f"/incidents/{incident['incident_id']}/execute",
-                    json={"playbook": "echo-fix", "params": {"target": "ch1-s1r1"},
+                    json={"playbook": "echo-fix", "params": {"target": "node-a1"},
                           "namespace": "nightorder-e2e", "timeout_seconds": 300}, headers=key)
     assert r.status_code == 202, r.text
     assert r.json()["playbook"] == "echo-fix@v1"
@@ -111,7 +111,7 @@ def test_sandbox_execution_on_cluster(client, project, stack):
         time.sleep(5)
     incident_final = client.get(f"/incidents/{incident['incident_id']}", headers=key).json()
     assert status == "executed", incident_final
-    assert "remediating ch1-s1r1" in incident_final["outcome"]
+    assert "remediating node-a1" in incident_final["outcome"]
 
     events = [e["type"] for e in client.get(f"/runs/{incident_final['run_id']}/events", headers=key).json()]
     for expected in ("RemediationApproved", "SandboxJobStarted", "SandboxJobCompleted", "RemediationExecuted"):

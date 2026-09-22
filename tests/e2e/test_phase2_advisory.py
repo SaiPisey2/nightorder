@@ -22,20 +22,20 @@ pytestmark = pytest.mark.skipif(
 
 SEED_KNOWLEDGE = [
     {"kind": "incident",
-     "title": "serp_get_results fails silently when PVC undersized",
-     "content": "SERP get-results pods die with 'No space left on device' when the PVC is "
-                "sized below keyword volume (~4M keywords needs 1600Gi). Failure is silent — "
-                "produces large datasets. Fix: resize PVC to match keyword count, rerun locale.",
+     "title": "fetch_results fails silently when the volume is undersized",
+     "content": "Collector pods die with 'No space left on device' when the PVC is "
+                "sized below row volume (~4M rows needs 1600Gi). Failure is silent — "
+                "produces large datasets. Fix: resize the volume to match row count, rerun locale.",
      "source": "INC-1024"},
     {"kind": "incident",
-     "title": "Second SV collection run required after RabbitMQ queue drain",
+     "title": "Second metrics collection run required after RabbitMQ queue drain",
      "content": "google_ads_sv_collection queue must drain to zero before the second collection "
-                "run. Keywords missing in initial run are collected on rerun. Symptom: missing SV rows.",
+                "run. Rows missing in initial run are collected on rerun. Symptom: missing summary rows.",
      "source": "runbook"},
     {"kind": "runbook",
-     "title": "rollup_loading_agent must run on the correct ClickHouse cluster",
-     "content": "Staging and production CH clusters swap roles each release (ch1/ch2/ch6, ch5 "
-                "non-trended). Verify cluster identity via supervisorctl before steps 500/501 — "
+     "title": "loader_agent must run on the correct analytics cluster",
+     "content": "Staging and production analytics clusters swap roles each release (primary and "
+                "secondary). Verify cluster identity before steps 500/501 — "
                 "loading into prod is a recurring hazard.",
      "source": "runbook"},
 ]
@@ -67,7 +67,7 @@ def test_phase2_troubleshoot_and_phase25_learning(client, project):
     # 1. a step that fails like the PVC incident
     spec = {
         "apiVersion": "nightorder/v1", "kind": "Pipeline", "name": "pvc-crash", "project": project["id"],
-        "steps": [{"id": "serp-results", "executor": "script",
+        "steps": [{"id": "fetch-results", "executor": "script",
                    "config": {"command": ["sh", "-c",
                               "echo 'writing dataset for locale us_en'; "
                               "echo 'OSError: [Errno 28] No space left on device'; exit 1"]},
@@ -79,7 +79,7 @@ def test_phase2_troubleshoot_and_phase25_learning(client, project):
     assert final["status"] == "failed"
 
     # 2. full troubleshooting flow (bundle → retrieval → LangGraph → gate)
-    resp = client.post(f"/runs/{run['run_id']}/steps/serp-results/troubleshoot",
+    resp = client.post(f"/runs/{run['run_id']}/steps/fetch-results/troubleshoot",
                        json={}, headers=key, timeout=300)
     assert resp.status_code == 200, resp.text
     result = resp.json()
@@ -89,7 +89,7 @@ def test_phase2_troubleshoot_and_phase25_learning(client, project):
     assert result["remediation_proposal"]
     # retrieval surfaced the seeded PVC incident
     titles = [h["title"] for h in result["similar_incidents"]]
-    assert any("PVC" in t for t in titles), titles
+    assert any("undersized" in t.lower() for t in titles), titles
     assert result["agents_visited"] == ["knowledge_retrieval", "troubleshooting",
                                         "remediation_planning", "human_interaction"]
 
@@ -112,7 +112,7 @@ def test_phase2_troubleshoot_and_phase25_learning(client, project):
 
     # 4. Phase 2.5 learning capture: outcome → knowledge record → indexed
     r = client.post(f"/incidents/{result['incident_id']}/outcome",
-                    json={"outcome": "Resized PVC to 1600Gi for us_en and re-ran serp_get_results; dataset normal.",
+                    json={"outcome": "Resized PVC to 1600Gi for us_en and re-ran fetch_results; dataset normal.",
                           "success": True}, headers=key)
     assert r.status_code == 200
     fix_record_id = r.json()["knowledge_record_id"]
@@ -122,7 +122,7 @@ def test_phase2_troubleshoot_and_phase25_learning(client, project):
     fix_indexed = False
     while time.monotonic() < deadline and not fix_indexed:
         hits = client.get(f"/projects/{project['id']}/knowledge/search",
-                          params={"q": "resized PVC rerun serp results", "kind": "fix"},
+                          params={"q": "resized volume rerun collection results", "kind": "fix"},
                           headers=key, timeout=60).json()
         fix_indexed = any(h["id"] == fix_record_id for h in hits)
         time.sleep(3)
@@ -134,11 +134,11 @@ def test_phase2_troubleshoot_and_phase25_learning(client, project):
 
     labeled = [
         LabeledQuery("no space left on device dataset silently wrong",
-                     record_ids["serp_get_results fails silently when PVC undersized"]),
-        LabeledQuery("missing search volume rows after first collection",
-                     record_ids["Second SV collection run required after RabbitMQ queue drain"]),
-        LabeledQuery("loading agent wrong clickhouse cluster production hazard",
-                     record_ids["rollup_loading_agent must run on the correct ClickHouse cluster"]),
+                     record_ids["fetch_results fails silently when the volume is undersized"]),
+        LabeledQuery("missing summary rows after first collection",
+                     record_ids["Second metrics collection run required after RabbitMQ queue drain"]),
+        LabeledQuery("loader agent wrong analytics cluster production hazard",
+                     record_ids["loader_agent must run on the correct analytics cluster"]),
     ]
     report = asyncio.run(evaluate_retrieval(project["id"], labeled, k=3))
     assert report.hit_at_k >= 2 / 3, f"retrieval quality too low: {report}"

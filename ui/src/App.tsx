@@ -151,7 +151,7 @@ export default function App() {
   return (
     <>
       <div className="topbar">
-        <div className="brand">Agent<span>OS</span></div>
+        <div className="brand">night<span>order</span></div>
         <div className="nav">
           <button className={page.name === "dashboard" ? "active" : ""} onClick={() => nav("dashboard")}>Dashboard</button>
           <button className={page.name === "pipelines" || page.name === "run" ? "active" : ""} onClick={() => nav("pipelines")}>Pipelines</button>

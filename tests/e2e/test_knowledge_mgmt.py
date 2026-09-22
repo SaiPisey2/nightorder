@@ -32,7 +32,7 @@ def _wait_indexed(client, project, query, record_id, timeout=300):
 def test_view_and_delete_knowledge(client, project):
     key = {"X-API-Key": project["key"]}
     rid = _seed(client, project, "Collector replicas crash on OOM",
-                "Collector pods OOMKilled during SV collection. Fix: raise memory limit to 2Gi "
+                "Collector pods OOMKilled during metrics collection. Fix: raise memory limit to 2Gi "
                 "and restart the deployment.", source="INC-2048")
     _wait_indexed(client, project, "collector out of memory", rid)
 
@@ -57,16 +57,16 @@ def test_view_and_delete_knowledge(client, project):
 def test_assistant_answers_fix_from_knowledge(client, project):
     key = {"X-API-Key": project["key"]}
     rid = _seed(client, project,
-                "PVC undersized causes silent serp_get_results corruption",
-                "When serp_get_results runs with an undersized PVC the pods hit 'No space left "
+                "undersized volume causes silent fetch_results corruption",
+                "When fetch_results runs with an undersized volume the pods hit 'No space left "
                 "on device' and produce corrupted datasets silently. Fix: size the PVC from the "
-                "keyword count (~4M keywords needs 1600Gi), then re-run the affected locale.",
+                "row count (~4M rows needs 1600Gi), then re-run the affected locale.",
                 source="INC-1024")
     _wait_indexed(client, project, "no space left on device datasets", rid)
 
     resp = client.post(f"/projects/{project['id']}/chat",
                        json={"messages": [{"role": "user",
-                             "content": "If serp results start producing weird datasets and pods "
+                             "content": "If collection results start producing weird datasets and pods "
                                         "log 'no space left on device', what's the solution?"}]},
                        headers=key, timeout=300)
     assert resp.status_code == 200, resp.text

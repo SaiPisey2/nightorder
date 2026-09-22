@@ -30,12 +30,12 @@ def test_rollup_mini_end_to_end(client, project):
     assert 2 in attempts, f"expected a designed re-run (attempt 2), got {drains}"
 
     # fan-out over 4 locales
-    locales = {s["unit"] for s in final["steps"] if s["step_id"] == "sv-collection" and s["unit"]}
+    locales = {s["unit"] for s in final["steps"] if s["step_id"] == "metrics-collection" and s["unit"]}
     assert locales == {"us_en", "uk_en", "de_de", "fr_fr"}
 
     # computed params recorded with provenance
     params = {p["name"]: p for p in final["parameters"]}
-    assert params["serp_cost_usd"]["value"] == "31000"
+    assert params["collection_cost_usd"]["value"] == "31000"
     assert params["yearmonth"]["value"].isdigit()
     assert "now_yearmonth" in params["yearmonth"]["provenance"]
 
