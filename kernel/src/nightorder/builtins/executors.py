@@ -109,16 +109,58 @@ class ArgoWorkflowExecutor(StepExecutor):
         from kubernetes.client.rest import ApiException
 
         cfg = settings()
+        namespace = config.get("namespace", cfg.argo_namespace)
+        group, version, plural = "argoproj.io", "v1alpha1", "workflows"
+        attach_to = (config.get("attach_to") or "").strip()
+        name = self._wf_name(ctx)
+
+        parameters = [
+            {"name": k, "value": str(v)} for k, v in (config.get("parameters") or {}).items()
+        ]
+
+        # Resolve the manifest before connecting to anything. A spec error —
+        # a missing file, a path that escapes the manifests dir, a manifest
+        # that is not a Workflow — is worth reporting without needing cluster
+        # credentials to discover it.
+        manifest = None
+        if not attach_to:
+            if config.get("manifest"):
+                manifest = dict(config["manifest"])
+            elif config.get("manifest_file"):
+                import os
+
+                import yaml as pyyaml
+
+                base = os.path.realpath(cfg.manifests_dir)
+                path = os.path.realpath(os.path.join(base, config["manifest_file"]))
+                if not path.startswith(base + os.sep):
+                    return ExecutionResult(status="failed",
+                                           logs=f"argo executor: manifest_file escapes manifests dir: {config['manifest_file']}")
+                if not os.path.isfile(path):
+                    return ExecutionResult(status="failed",
+                                           logs=f"argo executor: manifest_file not found: {path} "
+                                                f"(NIGHTORDER_MANIFESTS_DIR={cfg.manifests_dir})")
+                with open(path) as f:
+                    manifest = pyyaml.safe_load(f)
+                if not isinstance(manifest, dict) or manifest.get("kind") != "Workflow":
+                    return ExecutionResult(status="failed",
+                                           logs=f"argo executor: {path} is not an Argo Workflow manifest")
+            elif config.get("workflow_template_ref"):
+                manifest = {
+                    "apiVersion": "argoproj.io/v1alpha1",
+                    "kind": "Workflow",
+                    "spec": {"workflowTemplateRef": {"name": config["workflow_template_ref"]}},
+                }
+            else:
+                return ExecutionResult(status="failed", logs="argo executor: need manifest or workflow_template_ref")
+
         kube_context = config.get("kube_context") or cfg.kube_context or None
         try:
             k8s_config.load_kube_config(context=kube_context)
         except Exception:
             k8s_config.load_incluster_config()
         api = k8s_client.CustomObjectsApi()
-        namespace = config.get("namespace", cfg.argo_namespace)
-        group, version, plural = "argoproj.io", "v1alpha1", "workflows"
 
-        attach_to = (config.get("attach_to") or "").strip()
         if attach_to:
             # Re-poll mode: watch an existing workflow, never submit anything.
             try:
@@ -128,41 +170,6 @@ class ArgoWorkflowExecutor(StepExecutor):
                     status="failed",
                     logs=f"attach_to: workflow {namespace}/{attach_to} not found ({e.status})")
             return self._watch(api, namespace, attach_to, config, ctx)
-
-        name = self._wf_name(ctx)
-
-        parameters = [
-            {"name": k, "value": str(v)} for k, v in (config.get("parameters") or {}).items()
-        ]
-        if config.get("manifest"):
-            manifest = dict(config["manifest"])
-        elif config.get("manifest_file"):
-            import os
-
-            import yaml as pyyaml
-
-            base = os.path.realpath(cfg.manifests_dir)
-            path = os.path.realpath(os.path.join(base, config["manifest_file"]))
-            if not path.startswith(base + os.sep):
-                return ExecutionResult(status="failed",
-                                       logs=f"argo executor: manifest_file escapes manifests dir: {config['manifest_file']}")
-            if not os.path.isfile(path):
-                return ExecutionResult(status="failed",
-                                       logs=f"argo executor: manifest_file not found: {path} "
-                                            f"(NIGHTORDER_MANIFESTS_DIR={cfg.manifests_dir})")
-            with open(path) as f:
-                manifest = pyyaml.safe_load(f)
-            if not isinstance(manifest, dict) or manifest.get("kind") != "Workflow":
-                return ExecutionResult(status="failed",
-                                       logs=f"argo executor: {path} is not an Argo Workflow manifest")
-        elif config.get("workflow_template_ref"):
-            manifest = {
-                "apiVersion": "argoproj.io/v1alpha1",
-                "kind": "Workflow",
-                "spec": {"workflowTemplateRef": {"name": config["workflow_template_ref"]}},
-            }
-        else:
-            return ExecutionResult(status="failed", logs="argo executor: need manifest or workflow_template_ref")
 
         manifest.setdefault("metadata", {})
         manifest["metadata"].pop("generateName", None)

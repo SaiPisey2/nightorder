@@ -23,20 +23,6 @@ jobs:
   e2e:
     name: end to end
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_USER: nightorder
-          POSTGRES_PASSWORD: nightorder
-          POSTGRES_DB: nightorder
-        ports: ["5433:5432"]
-        options: >-
-          --health-cmd "pg_isready -U nightorder"
-          --health-interval 5s --health-timeout 5s --health-retries 20
-      qdrant:
-        image: qdrant/qdrant:v1.18.3
-        ports: ["6333:6333"]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
@@ -51,21 +37,21 @@ jobs:
         working-directory: ui
         run: npm ci && npm run build
 
-      - name: Start a Temporal dev server
+      # The harness brings up postgres and qdrant with docker compose and
+      # starts its own temporal dev server, worker, api and relay. It only
+      # needs docker (present on the runner) and the temporal CLI on PATH.
+      - name: Install the Temporal CLI
         run: |
           curl -sSf https://temporal.download/cli.sh | sh
           echo "$HOME/.temporalio/bin" >> "$GITHUB_PATH"
-          "$HOME/.temporalio/bin/temporal" server start-dev --headless \
-            --db-filename /tmp/temporal-ci.db > /tmp/temporal.log 2>&1 &
-          for _ in $(seq 1 60); do
-            "$HOME/.temporalio/bin/temporal" operator cluster health >/dev/null 2>&1 && exit 0
-            sleep 1
-          done
-          echo "temporal did not become healthy"; cat /tmp/temporal.log; exit 1
 
       # Runs the thirteen tests that need no credentials. The advisory tests
       # skip without ANTHROPIC_API_KEY and the cluster tests are opt-in.
       - run: uv run pytest tests/e2e -q
+
+      - name: Harness logs on failure
+        if: failure()
+        run: tail -n 100 .e2e-logs/* || true
 
   provenance:
     name: commit trailers
