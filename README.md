@@ -193,3 +193,7 @@ k8s/sandbox/             sandbox service account and default-deny NetworkPolicy
 
 Configuration is environment only — see `.env.example`. Design rationale is in
 `docs/architecture.md`; onboarding a team is `docs/onboarding-guide.md`.
+
+## License
+
+Apache 2.0
